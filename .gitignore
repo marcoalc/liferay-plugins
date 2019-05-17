@@ -9,18 +9,22 @@
 .ant_targets
 .ant-targets-build.xml
 .gh.json
+.idea
 .sass-cache
 .sass_cache_*.css
 _sass_cache_*.css
 
+**/.gradle
 **/.sonar
 **/pmd-reports
+**/test.*.properties
 
 /.bnd
 /.gradle
 /.ivy
 
 /*/*/bin
+/*/*/build
 /*/*/classes
 /*/*/javadoc
 /*/*/temp
@@ -32,6 +36,7 @@ _sass_cache_*.css
 /*/*/docroot/WEB-INF/lib/portal-compat-shared.jar
 
 /baseline-reports
+/build
 /build.*.properties
 /dist
 

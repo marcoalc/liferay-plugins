@@ -43,6 +43,7 @@ import com.liferay.portal.kernel.util.ReleaseInfo;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.zip.ZipReader;
 import com.liferay.portal.kernel.zip.ZipReaderFactoryUtil;
 import com.liferay.portal.model.Group;
@@ -130,7 +131,8 @@ public class SyncDLObjectServiceImpl extends SyncDLObjectServiceBaseImpl {
 				repositoryId, folderId, sourceFileName, mimeType, title,
 				description, changeLog, file, serviceContext);
 
-			return toSyncDLObject(fileEntry, SyncDLObjectConstants.EVENT_ADD);
+			return toSyncDLObject(
+				fileEntry, SyncDLObjectConstants.EVENT_ADD, checksum);
 		}
 		catch (PortalException pe) {
 			if (pe instanceof DuplicateFileException) {
@@ -307,6 +309,10 @@ public class SyncDLObjectServiceImpl extends SyncDLObjectServiceBaseImpl {
 			FileEntry sourceFileEntry = dlAppLocalService.getFileEntry(
 				sourceFileEntryId);
 
+			SyncDLObject sourceSyncDLObject =
+				syncDLObjectLocalService.fetchSyncDLObject(
+					SyncDLObjectConstants.TYPE_FILE, sourceFileEntryId);
+
 			FileVersion fileVersion = sourceFileEntry.getLatestFileVersion();
 
 			if (!group.isUser() &&
@@ -323,7 +329,9 @@ public class SyncDLObjectServiceImpl extends SyncDLObjectServiceBaseImpl {
 				fileVersion.getContentStream(false), sourceFileEntry.getSize(),
 				serviceContext);
 
-			return toSyncDLObject(fileEntry, SyncDLObjectConstants.EVENT_ADD);
+			return toSyncDLObject(
+				fileEntry, SyncDLObjectConstants.EVENT_ADD,
+				sourceSyncDLObject.getChecksum());
 		}
 		catch (PortalException pe) {
 			throw new PortalException(SyncUtil.buildExceptionMessage(pe), pe);
@@ -534,9 +542,9 @@ public class SyncDLObjectServiceImpl extends SyncDLObjectServiceBaseImpl {
 					PortletPropsKeys.SYNC_OAUTH_CONSUMER_SECRET);
 
 				syncContext.setOAuthConsumerSecret(oAuthConsumerSecret);
-			}
 
-			syncContext.setOAuthEnabled(oAuthEnabled);
+				syncContext.setOAuthEnabled(oAuthEnabled);
+			}
 
 			PluginPackage syncWebPluginPackage =
 				DeployManagerUtil.getInstalledPluginPackage("sync-web");
@@ -544,6 +552,31 @@ public class SyncDLObjectServiceImpl extends SyncDLObjectServiceBaseImpl {
 			syncContext.setPluginVersion(syncWebPluginPackage.getVersion());
 
 			if (!user.isDefaultUser()) {
+				boolean lanEnabled = PrefsPropsUtil.getBoolean(
+					user.getCompanyId(), PortletPropsKeys.SYNC_LAN_ENABLED,
+					PortletPropsValues.SYNC_LAN_ENABLED);
+
+				if (lanEnabled) {
+					String lanCertificate = PrefsPropsUtil.getString(
+						user.getCompanyId(),
+						PortletPropsKeys.SYNC_LAN_CERTIFICATE);
+
+					syncContext.setLanCertificate(lanCertificate);
+
+					syncContext.setLanEnabled(lanEnabled);
+
+					String lanKey = PrefsPropsUtil.getString(
+						user.getCompanyId(), PortletPropsKeys.SYNC_LAN_KEY);
+
+					syncContext.setLanKey(lanKey);
+
+					String lanServerUuid = PrefsPropsUtil.getString(
+						user.getCompanyId(),
+						PortletPropsKeys.SYNC_LAN_SERVER_UUID);
+
+					syncContext.setLanServerUuid(lanServerUuid);
+				}
+
 				syncContext.setPortalBuildNumber(ReleaseInfo.getBuildNumber());
 
 				PluginPackage soPortletPluginPackage =
@@ -1048,7 +1081,7 @@ public class SyncDLObjectServiceImpl extends SyncDLObjectServiceBaseImpl {
 				changeLog, majorVersion, file, serviceContext);
 
 			return toSyncDLObject(
-				fileEntry, SyncDLObjectConstants.EVENT_UPDATE);
+				fileEntry, SyncDLObjectConstants.EVENT_UPDATE, checksum);
 		}
 		catch (PortalException pe) {
 			throw new PortalException(SyncUtil.buildExceptionMessage(pe), pe);
@@ -1294,6 +1327,15 @@ public class SyncDLObjectServiceImpl extends SyncDLObjectServiceBaseImpl {
 			PortletPropsKeys.SYNC_CLIENT_BATCH_FILE_MAX_SIZE,
 			String.valueOf(batchFileMaxSize));
 
+		boolean forceSecurityMode = PrefsPropsUtil.getBoolean(
+			user.getCompanyId(),
+			PortletPropsKeys.SYNC_CLIENT_FORCE_SECURITY_MODE,
+			PortletPropsValues.SYNC_CLIENT_FORCE_SECURITY_MODE);
+
+		portletPreferencesMap.put(
+			PortletPropsKeys.SYNC_CLIENT_FORCE_SECURITY_MODE,
+			String.valueOf(forceSecurityMode));
+
 		int maxConnections = PrefsPropsUtil.getInteger(
 			user.getCompanyId(), PortletPropsKeys.SYNC_CLIENT_MAX_CONNECTIONS,
 			PortletPropsValues.SYNC_CLIENT_MAX_CONNECTIONS);
@@ -1398,9 +1440,29 @@ public class SyncDLObjectServiceImpl extends SyncDLObjectServiceBaseImpl {
 	protected SyncDLObject toSyncDLObject(FileEntry fileEntry, String event)
 		throws PortalException, SystemException {
 
+		return toSyncDLObject(fileEntry, event, null);
+	}
+
+	protected SyncDLObject toSyncDLObject(
+			FileEntry fileEntry, String event, String checksum)
+		throws PortalException, SystemException {
+
 		SyncDLObject syncDLObject = SyncUtil.toSyncDLObject(fileEntry, event);
 
-		return checkModifiedTime(syncDLObject, fileEntry.getFileEntryId());
+		checkModifiedTime(syncDLObject, fileEntry.getFileEntryId());
+
+		if (Validator.isNotNull(checksum)) {
+			SyncUtil.addChecksum(
+				syncDLObject.getModifiedTime(), fileEntry.getFileEntryId(),
+				checksum);
+		}
+
+		String lanTokenKey = SyncUtil.getLanTokenKey(
+			syncDLObject.getModifiedTime(), fileEntry.getFileEntryId(), true);
+
+		syncDLObject.setLanTokenKey(lanTokenKey);
+
+		return syncDLObject;
 	}
 
 	protected SyncDLObject toSyncDLObject(Folder folder, String event)

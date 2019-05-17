@@ -34,6 +34,8 @@ import com.liferay.portal.kernel.lar.StagedModelDataHandlerUtil;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.StreamUtil;
+import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.portletfilerepository.PortletFileRepositoryUtil;
@@ -142,32 +144,32 @@ public class KBArticleStagedModelDataHandler
 		Map<Long, Long> kbArticleResourcePrimKeys =
 			(Map<Long, Long>)portletDataContext.getNewPrimaryKeysMap(
 				KBArticle.class);
+		Map<Long, Long> kbFolderResourcePrimKeys =
+			(Map<Long, Long>)portletDataContext.getNewPrimaryKeysMap(
+				KBFolder.class);
 
 		long resourcePrimaryKey = MapUtil.getLong(
 			kbArticleResourcePrimKeys, kbArticle.getResourcePrimKey(),
 			kbArticle.getResourcePrimKey());
-		long parentResourcePrimKey = MapUtil.getLong(
-			kbArticleResourcePrimKeys, kbArticle.getParentResourcePrimKey(),
-			kbArticle.getParentResourcePrimKey());
 
-		long kbFolderClassNameId = PortalUtil.getClassNameId(
-			KBFolderConstants.getClassName());
+		long parentResourcePrimKey = 0;
 
-		if ((kbArticle.getParentResourceClassNameId() !=
-				kbArticle.getClassNameId()) &&
-			(kbArticle.getParentResourceClassNameId() != kbFolderClassNameId)) {
+		if (kbArticle.getParentResourcePrimKey() == kbArticle.getKbFolderId()) {
+			long kbFolderClassNameId = PortalUtil.getClassNameId(
+				KBFolderConstants.getClassName());
 
-			KBArticle parentKBArticle =
-				KBArticleLocalServiceUtil.fetchLatestKBArticle(
-					parentResourcePrimKey, WorkflowConstants.STATUS_APPROVED);
+			kbArticle.setParentResourceClassNameId(kbFolderClassNameId);
 
-			if (parentKBArticle != null) {
-				kbArticle.setParentResourceClassNameId(
-					kbArticle.getClassNameId());
-			}
-			else {
-				kbArticle.setParentResourceClassNameId(kbFolderClassNameId);
-			}
+			parentResourcePrimKey = MapUtil.getLong(
+				kbFolderResourcePrimKeys, kbArticle.getParentResourcePrimKey(),
+				kbArticle.getParentResourcePrimKey());
+		}
+		else {
+			kbArticle.setParentResourceClassNameId(kbArticle.getClassNameId());
+
+			parentResourcePrimKey = MapUtil.getLong(
+				kbArticleResourcePrimKeys, kbArticle.getParentResourcePrimKey(),
+				kbArticle.getParentResourcePrimKey());
 		}
 
 		if (kbArticle.getParentResourcePrimKey() !=
@@ -178,12 +180,17 @@ public class KBArticleStagedModelDataHandler
 
 				StagedModelDataHandlerUtil.importReferenceStagedModels(
 					portletDataContext, kbArticle, KBArticle.class);
+
+				parentResourcePrimKey = MapUtil.getLong(
+					kbArticleResourcePrimKeys, parentResourcePrimKey,
+					parentResourcePrimKey);
 			}
 			else {
-				StagedModelDataHandlerUtil.importReferenceStagedModels(
-					portletDataContext, kbArticle, KBFolder.class);
+				StagedModelDataHandlerUtil.importReferenceStagedModel(
+					portletDataContext, kbArticle, KBFolder.class,
+					parentResourcePrimKey);
 
-				Map<Long, Long> kbFolderResourcePrimKeys =
+				kbFolderResourcePrimKeys =
 					(Map<Long, Long>)portletDataContext.getNewPrimaryKeysMap(
 						KBFolder.class);
 
@@ -196,13 +203,17 @@ public class KBArticleStagedModelDataHandler
 		if (parentResourcePrimKey ==
 				KBFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
 
-			Map<Long, Long> kbFolderResourcePrimKeys =
-				(Map<Long, Long>)portletDataContext.getNewPrimaryKeysMap(
-					KBFolder.class);
-
 			parentResourcePrimKey = MapUtil.getLong(
 				kbFolderResourcePrimKeys, kbArticle.getParentResourcePrimKey(),
 				KBFolderConstants.DEFAULT_PARENT_FOLDER_ID);
+		}
+
+		String urlTitle = kbArticle.getUrlTitle();
+
+		if (Validator.isNotNull(urlTitle) &&
+			!urlTitle.startsWith(StringPool.SLASH)) {
+
+			kbArticle.setUrlTitle(StringPool.SLASH + urlTitle);
 		}
 
 		String[] sections = AdminUtil.unescapeSections(kbArticle.getSections());
@@ -228,6 +239,23 @@ public class KBArticleStagedModelDataHandler
 				existingKBArticle = KBArticleUtil.fetchByR_G_L_First(
 					resourcePrimaryKey, portletDataContext.getScopeGroupId(),
 					true, null);
+
+				if (existingKBArticle == null) {
+					Map<Long, Long> kbFolderIds =
+						(Map<Long, Long>)portletDataContext.
+							getNewPrimaryKeysMap(KBFolder.class);
+
+					long kbFolderId = MapUtil.getLong(
+						kbFolderIds, kbArticle.getKbFolderId(),
+						kbArticle.getKbFolderId());
+
+					existingKBArticle =
+						KBArticleLocalServiceUtil.
+							fetchLatestKBArticleByUrlTitle(
+								portletDataContext.getScopeGroupId(),
+								kbFolderId, kbArticle.getUrlTitle(),
+								WorkflowConstants.STATUS_ANY);
+				}
 
 				if (existingKBArticle == null) {
 					importedKBArticle = KBArticleLocalServiceUtil.addKBArticle(

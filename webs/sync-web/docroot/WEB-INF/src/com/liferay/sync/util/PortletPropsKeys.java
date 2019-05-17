@@ -29,6 +29,7 @@ public class PortletPropsKeys
 	public static final String SYNC_FILE_CHECKSUM_THRESHOLD_SIZE =
 		"sync.file.checksum.threshold.size";
 
+	@Deprecated
 	public static final String SYNC_FILE_DIFF_CACHE_DELETE_INTERVAL =
 		"sync.file.diff.cache.delete.interval";
 
@@ -37,6 +38,12 @@ public class PortletPropsKeys
 
 	public static final String SYNC_FILE_DIFF_CACHE_EXPIRATION_TIME =
 		"sync.file.diff.cache.expiration.time";
+
+	public static final String SYNC_LAN_CERTIFICATE = "sync.lan.certificate";
+
+	public static final String SYNC_LAN_KEY = "sync.lan.key";
+
+	public static final String SYNC_LAN_SERVER_UUID = "sync.lan.server.uuid";
 
 	public static final String SYNC_MAC_PACKAGE_FOLDER_EXTENSIONS =
 		"sync.mac.package.folder.extensions";

@@ -17,6 +17,7 @@ package com.liferay.sync.service.impl;
 import com.liferay.oauth.model.OAuthApplication;
 import com.liferay.oauth.model.OAuthApplicationConstants;
 import com.liferay.oauth.service.OAuthApplicationLocalServiceUtil;
+import com.liferay.portal.kernel.deploy.DeployManagerUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
@@ -26,6 +27,7 @@ import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.sync.service.base.SyncPreferencesLocalServiceBaseImpl;
 import com.liferay.sync.shared.util.PortletPropsKeys;
+import com.liferay.sync.util.SyncUtil;
 import com.liferay.util.portlet.PortletProps;
 
 import java.io.InputStream;
@@ -42,8 +44,28 @@ public class SyncPreferencesLocalServiceImpl
 	extends SyncPreferencesLocalServiceBaseImpl {
 
 	@Override
+	public void enableLanSync(long companyId)
+		throws PortalException, SystemException {
+
+		try {
+			SyncUtil.enableLanSync(companyId);
+		}
+		catch (Exception e) {
+			throw new PortalException(e);
+		}
+	}
+
+	@Override
 	public void enableOAuth(long companyId, ServiceContext serviceContext)
 		throws PortalException, SystemException {
+
+		if (!DeployManagerUtil.isDeployed("oauth-portlet")) {
+			if (_log.isWarnEnabled()) {
+				_log.warn("OAuth Provider must be deployed to enable OAuth");
+			}
+
+			return;
+		}
 
 		long oAuthApplicationId = PrefsPropsUtil.getLong(
 			companyId, PortletPropsKeys.SYNC_OAUTH_APPLICATION_ID, 0);

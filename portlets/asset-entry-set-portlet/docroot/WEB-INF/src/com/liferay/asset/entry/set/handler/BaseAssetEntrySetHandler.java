@@ -93,7 +93,6 @@ public class BaseAssetEntrySetHandler implements AssetEntrySetHandler {
 		jsonObject.put(
 			"sendEmailNotifications",
 			payloadJSONObject.getBoolean("sendEmailNotifications"));
-		jsonObject.put("title", payloadJSONObject.getString("title"));
 		jsonObject.put("truncated", payloadJSONObject.getBoolean("truncated"));
 
 		String truncatedMessage = payloadJSONObject.getString(
@@ -104,55 +103,62 @@ public class BaseAssetEntrySetHandler implements AssetEntrySetHandler {
 		}
 
 		jsonObject.put("type", payloadJSONObject.getString("type"));
+		jsonObject.put("userAgent", payloadJSONObject.getString("userAgent"));
 
 		JSONArray sharedToJSONArray = payloadJSONObject.getJSONArray(
 			AssetEntrySetConstants.PAYLOAD_KEY_SHARED_TO);
 
-		String[] assetTagNames = StringUtil.split(
-			payloadJSONObject.getString(
-				AssetEntrySetConstants.PAYLOAD_KEY_ASSET_TAG_NAMES));
+		if (sharedToJSONArray != null) {
+			String[] assetTagNames = StringUtil.split(
+				payloadJSONObject.getString(
+					AssetEntrySetConstants.PAYLOAD_KEY_ASSET_TAG_NAMES));
 
-		JSONArray assetTagsJSONArray =
-			AssetEntrySetParticipantInfoUtil.getAssetTagsJSONArray(
-				userId, assetTagNames);
+			JSONArray assetTagsJSONArray =
+				AssetEntrySetParticipantInfoUtil.getAssetTagsJSONArray(
+					userId, assetTagNames);
 
-		for (int i = 0; i < assetTagsJSONArray.length(); i++) {
-			sharedToJSONArray.put(assetTagsJSONArray.getJSONObject(i));
+			for (int i = 0; i < assetTagsJSONArray.length(); i++) {
+				sharedToJSONArray.put(assetTagsJSONArray.getJSONObject(i));
+			}
+
+			sharedToJSONArray = processSharedToJSONArray(sharedToJSONArray);
+
+			jsonObject.put(
+				AssetEntrySetConstants.PAYLOAD_KEY_SHARED_TO,
+				sharedToJSONArray);
 		}
-
-		sharedToJSONArray = processSharedToJSONArray(sharedToJSONArray);
-
-		jsonObject.put(
-			AssetEntrySetConstants.PAYLOAD_KEY_SHARED_TO, sharedToJSONArray);
 
 		return jsonObject;
 	}
 
 	protected JSONArray dedupeSharedToJSONArray(JSONArray sharedToJSONArray) {
-		Map<Long, List<Long>> classNameIds = new HashMap<Long, List<Long>>();
+		Map<Long, List<Long>> entityClassNameIds =
+			new HashMap<Long, List<Long>>();
 
 		JSONArray newSharedToJSONArray = JSONFactoryUtil.createJSONArray();
 
 		for (int i = 0; i < sharedToJSONArray.length(); i++) {
 			JSONObject sharedToJSONObject = sharedToJSONArray.getJSONObject(i);
 
-			long classNameId = sharedToJSONObject.getLong("classNameId");
+			long entityClassNameId = sharedToJSONObject.getLong(
+				"entityClassNameId");
 
-			List<Long> classPKs = classNameIds.get(classNameId);
+			List<Long> entityClassPKs = entityClassNameIds.get(
+				entityClassNameId);
 
-			if (classPKs == null) {
-				classPKs = new ArrayList<Long>();
+			if (entityClassPKs == null) {
+				entityClassPKs = new ArrayList<Long>();
 			}
 
-			long classPK = sharedToJSONObject.getLong("classPK");
+			long entityClassPK = sharedToJSONObject.getLong("entityClassPK");
 
-			if (classPKs.contains(classPK)) {
+			if (entityClassPKs.contains(entityClassPK)) {
 				continue;
 			}
 
-			classPKs.add(classPK);
+			entityClassPKs.add(entityClassPK);
 
-			classNameIds.put(classNameId, classPKs);
+			entityClassNameIds.put(entityClassNameId, entityClassPKs);
 
 			newSharedToJSONArray.put(sharedToJSONObject);
 		}

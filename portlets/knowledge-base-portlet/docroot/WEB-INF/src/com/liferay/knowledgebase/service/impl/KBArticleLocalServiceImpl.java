@@ -126,6 +126,8 @@ public class KBArticleLocalServiceImpl extends KBArticleLocalServiceBaseImpl {
 		long kbFolderId = KnowledgeBaseUtil.getKBFolderId(
 			parentResourceClassNameId, parentResourcePrimKey);
 
+		urlTitle = StringUtil.toLowerCase(urlTitle);
+
 		validateUrlTitle(groupId, kbFolderId, urlTitle);
 
 		long kbArticleId = counterLocalService.increment();
@@ -748,6 +750,13 @@ public class KBArticleLocalServiceImpl extends KBArticleLocalServiceBaseImpl {
 		}
 
 		return kbArticlePersistence.countByR_S(resourcePrimKey, status);
+	}
+
+	@Override
+	public List<KBArticle> getKBFolderKBArticles(long groupId, long kbFolderId)
+		throws SystemException {
+
+		return kbArticlePersistence.findByG_KBFI_L(groupId, kbFolderId, true);
 	}
 
 	@Override

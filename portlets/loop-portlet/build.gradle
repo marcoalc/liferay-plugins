@@ -1,0 +1,10 @@
+import com.liferay.gradle.plugins.node.tasks.ExecuteNpmTask
+
+apply plugin: "com.liferay.node"
+
+task testJS(type: ExecuteNpmTask)
+
+testJS {
+	args "test"
+	dependsOn npmInstall
+}

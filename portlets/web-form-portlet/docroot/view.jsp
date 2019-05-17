@@ -67,14 +67,14 @@ String successURL = portletPreferences.getValue("successURL", StringPool.BLANK);
 				<liferay-ui:error key='<%= "error" + fieldLabel %>' message="<%= fieldValidationErrorMessage %>" />
 
 				<c:if test="<%= Validator.isNotNull(fieldValidationScript) %>">
-					<div class="hide" id="<portlet:namespace />validationError<%= fieldName %>">
+					<div class="hide" id="<portlet:namespace />validationError<%= fieldName %>" role="alert">
 						<span class="alert alert-error"><%= fieldValidationErrorMessage %></span>
 					</div>
 				</c:if>
 			</c:if>
 
 			<c:if test="<%= !fieldOptional %>">
-				<div class="hide" id="<portlet:namespace />fieldOptionalError<%= fieldName %>">
+				<div class="hide" id="<portlet:namespace />fieldOptionalError<%= fieldName %>" role="alert">
 					<span class="alert alert-error"><liferay-ui:message key="this-field-is-mandatory" /></span>
 				</div>
 			</c:if>
@@ -147,128 +147,198 @@ String successURL = portletPreferences.getValue("successURL", StringPool.BLANK);
 </aui:form>
 
 <aui:script use="aui-base,selector-css3">
+	var keys = [];
+
+	var fieldLabels = {};
+	var fieldOptional = {};
+	var fieldValidationErrorMessages = {};
+	var fieldValidationFunctions = {};
+
+	var getFieldsMap = function() {
+		var fieldsMap = {};
+
+		keys.forEach(
+			function(key) {
+				var field = A.one('[name="<portlet:namespace />' + key + '"]');
+
+				if (field && (field.attr('type') === 'hidden')) {
+					field = A.one('[name="<portlet:namespace />' + key + 'Checkbox"]');
+				}
+
+				if (field && ((field.attr('type') === 'checkbox') || (field.attr('type') === 'radio'))) {
+					if (field.attr('type') === 'checkbox') {
+						field = A.one('[name="<portlet:namespace />' + key + 'Checkbox"]:checked');
+					}
+					else {
+						field = A.one('[name="<portlet:namespace />' + key + '"]:checked');
+					}
+
+					fieldsMap[key] = '';
+
+					if (field) {
+						fieldsMap[key] = field.val();
+					}
+				}
+				else {
+					fieldsMap[key] = (field && field.val()) || '';
+				}
+			});
+
+		return fieldsMap;
+	}
+
+	var validateField = function(key) {
+		var fieldsMap = getFieldsMap();
+
+		var field = A.one('[name="<portlet:namespace />' + key + '"]');
+
+		if (field && (field.attr('type') === 'hidden')) {
+			field = A.one('[name="<portlet:namespace />' + key + 'Checkbox"]');
+		}
+		else if (field && (field.attr('type') === 'radio')) {
+			var uncheckedOptions = A.all('[name="<portlet:namespace />' + key + '"]:not(:checked)');
+
+			uncheckedOptions.each(
+				function(option) {
+					option.removeAttribute('aria-invalid');
+				}
+			);
+
+			field = A.one('[name="<portlet:namespace />' + key + '"]:checked');
+		}
+
+		var currentFieldValue = fieldsMap[key];
+
+		var optionalFieldError = A.one('#<portlet:namespace />fieldOptionalError' + key);
+		var validationError = A.one('#<portlet:namespace />validationError' + key);
+
+		if (!fieldOptional[key] && currentFieldValue.match(/^\s*$/)) {
+			A.all('.alert-success').hide();
+
+			if (validationError) {
+				validationError.hide();
+			}
+
+			if (optionalFieldError) {
+				optionalFieldError.show();
+				optionalFieldError.replace(optionalFieldError);
+			}
+
+			if (field) {
+				field.attr('aria-invalid', true);
+			}
+		}
+		else if (!fieldValidationFunctions[key](currentFieldValue, fieldsMap)) {
+			A.all('.alert-success').hide();
+
+			if (optionalFieldError) {
+				optionalFieldError.hide();
+			}
+
+			if (validationError) {
+				validationError.show();
+				validationError.replace(validationError);
+			}
+
+			if (field) {
+				field.attr('aria-invalid', true);
+			}
+		}
+		else {
+			if (optionalFieldError) {
+				optionalFieldError.hide();
+			}
+
+			if (validationError) {
+				validationError.hide();
+			}
+
+			if (field) {
+				field.attr('aria-invalid', false);
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	<%
+	int i = 1;
+
+	String fieldName = "field" + i;
+	String fieldLabel = portletPreferences.getValue("fieldLabel" + i, StringPool.BLANK);
+
+	while ((i == 1) || Validator.isNotNull(fieldLabel)) {
+		boolean fieldOptional = PrefsParamUtil.getBoolean(portletPreferences, request, "fieldOptional" + i, false);
+		String fieldValidationScript = portletPreferences.getValue("fieldValidationScript" + i, StringPool.BLANK);
+		String fieldValidationErrorMessage = portletPreferences.getValue("fieldValidationErrorMessage" + i, StringPool.BLANK);
+	%>
+
+		var key = '<%= fieldName %>';
+
+		keys[<%= i %>] = key;
+
+		fieldLabels[key] = '<%= HtmlUtil.escapeJS(fieldLabel) %>';
+		fieldValidationErrorMessages[key] = '<%= HtmlUtil.escapeJS(fieldValidationErrorMessage) %>';
+
+		function fieldValidationFunction<%= i %>(currentFieldValue, fieldsMap) {
+			<c:choose>
+				<c:when test="<%= PortletPropsValues.VALIDATION_SCRIPT_ENABLED && Validator.isNotNull(fieldValidationScript) %>">
+					<%= fieldValidationScript %>
+				</c:when>
+				<c:otherwise>
+					return true;
+				</c:otherwise>
+			</c:choose>
+		};
+
+		fieldOptional[key] = <%= fieldOptional %>;
+		fieldValidationFunctions[key] = fieldValidationFunction<%= i %>;
+
+	<%
+		i++;
+
+		fieldName = "field" + i;
+		fieldLabel = portletPreferences.getValue("fieldLabel" + i, "");
+	}
+	%>
+
+	keys.forEach(
+		function(key) {
+			var fields = A.all('[name="<portlet:namespace />' + key + '"]');
+
+			var addOnBlurFieldValidation = function(field) {
+				if (field && (field.attr('type') === 'hidden')) {
+					field = A.one('[name="<portlet:namespace />' + key + 'Checkbox"]');
+				}
+
+				field.on(
+					'blur',
+					function(event) {
+						if (!validateField(key)) {
+							event.halt();
+							event.stopImmediatePropagation();
+						}
+					}
+				);
+			};
+
+			fields.each(addOnBlurFieldValidation);
+		}
+	);
+
 	var form = A.one('#<portlet:namespace />fm');
 
 	if (form) {
 		form.on(
 			'submit',
 			function(event) {
-				var keys = [];
-
-				var fieldLabels = {};
-				var fieldOptional = {};
-				var fieldValidationErrorMessages = {};
-				var fieldValidationFunctions = {};
-				var fieldsMap = {};
-
-				<%
-				int i = 1;
-
-				String fieldName = "field" + i;
-				String fieldLabel = portletPreferences.getValue("fieldLabel" + i, StringPool.BLANK);
-
-				while ((i == 1) || Validator.isNotNull(fieldLabel)) {
-					boolean fieldOptional = PrefsParamUtil.getBoolean(portletPreferences, request, "fieldOptional" + i, false);
-					String fieldType = portletPreferences.getValue("fieldType" + i, "text");
-					String fieldValidationScript = portletPreferences.getValue("fieldValidationScript" + i, StringPool.BLANK);
-					String fieldValidationErrorMessage = portletPreferences.getValue("fieldValidationErrorMessage" + i, StringPool.BLANK);
-				%>
-
-					var key = '<%= fieldName %>';
-
-					keys[<%= i %>] = key;
-
-					fieldLabels[key] = '<%= HtmlUtil.escape(fieldLabel) %>';
-					fieldValidationErrorMessages[key] = '<%= fieldValidationErrorMessage %>';
-
-					function fieldValidationFunction<%= i %>(currentFieldValue, fieldsMap) {
-						<c:choose>
-							<c:when test="<%= PortletPropsValues.VALIDATION_SCRIPT_ENABLED && Validator.isNotNull(fieldValidationScript) %>">
-								<%= fieldValidationScript %>
-							</c:when>
-							<c:otherwise>
-								return true;
-							</c:otherwise>
-						</c:choose>
-					};
-
-					fieldOptional[key] = <%= fieldOptional %>;
-					fieldValidationFunctions[key] = fieldValidationFunction<%= i %>;
-
-					<c:choose>
-						<c:when test='<%= fieldType.equals("checkbox") %>'>
-							var checkBox = A.one('input[name=<portlet:namespace />field<%= i %>Checkbox]:checked');
-
-							fieldsMap[key] = '';
-
-							if (checkBox) {
-								fieldsMap[key] = checkBox.val();
-							}
-						</c:when>
-						<c:when test='<%= fieldType.equals("radio") %>'>
-							var radioButton = A.one('input[name=<portlet:namespace />field<%= i %>]:checked');
-
-							fieldsMap[key] = '';
-
-							if (radioButton) {
-								fieldsMap[key] = radioButton.val();
-							}
-						</c:when>
-						<c:otherwise>
-							var inputField = A.one('#<portlet:namespace />field<%= i %>');
-
-							fieldsMap[key] = (inputField && inputField.val()) || '';
-						</c:otherwise>
-					</c:choose>
-
-				<%
-					i++;
-
-					fieldName = "field" + i;
-					fieldLabel = portletPreferences.getValue("fieldLabel" + i, "");
-				}
-				%>
-
 				var validationErrors = false;
 
 				for (var i = 1; i < keys.length; i++) {
-					var key = keys [i];
-
-					var currentFieldValue = fieldsMap[key];
-
-					var optionalFieldError = A.one('#<portlet:namespace />fieldOptionalError' + key);
-					var validationError = A.one('#<portlet:namespace />validationError' + key);
-
-					if (!fieldOptional[key] && currentFieldValue.match(/^\s*$/)) {
+					if (!validateField(keys[i])) {
 						validationErrors = true;
-
-						A.all('.alert-success').hide();
-
-						if (optionalFieldError) {
-							optionalFieldError.show();
-						}
-					}
-					else if (!fieldValidationFunctions[key](currentFieldValue, fieldsMap)) {
-						validationErrors = true;
-
-						A.all('.alert-success').hide();
-
-						if (optionalFieldError) {
-							optionalFieldError.hide();
-						}
-
-						if (validationError) {
-							validationError.show();
-						}
-					}
-					else {
-						if (optionalFieldError) {
-							optionalFieldError.hide();
-						}
-
-						if (validationError) {
-							validationError.hide();
-						}
 					}
 				}
 

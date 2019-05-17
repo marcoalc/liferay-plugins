@@ -290,11 +290,23 @@ public class AssetEntrySetLikeLocalServiceWrapper
 	}
 
 	@Override
+	public void deleteAssetEntrySetLikes(long assetEntrySetId)
+		throws com.liferay.portal.kernel.exception.SystemException {
+		_assetEntrySetLikeLocalService.deleteAssetEntrySetLikes(assetEntrySetId);
+	}
+
+	@Override
 	public com.liferay.asset.entry.set.model.AssetEntrySetLike fetchAssetEntrySetLike(
 		long assetEntrySetId, long classNameId, long classPK)
 		throws com.liferay.portal.kernel.exception.SystemException {
 		return _assetEntrySetLikeLocalService.fetchAssetEntrySetLike(assetEntrySetId,
 			classNameId, classPK);
+	}
+
+	@Override
+	public int getAssetEntrySetLikeCount(long assetEntrySetId)
+		throws com.liferay.portal.kernel.exception.SystemException {
+		return _assetEntrySetLikeLocalService.getAssetEntrySetLikeCount(assetEntrySetId);
 	}
 
 	@Override

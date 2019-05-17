@@ -267,13 +267,7 @@ public class BundleServletContext
 			return _contextPath;
 		}
 
-		StringBundler sb = new StringBundler(5);
-
-		String contextPath = super.getContextPath();
-
-		if (!contextPath.equals(StringPool.SLASH)) {
-			sb.append(contextPath);
-		}
+		StringBundler sb = new StringBundler(4);
 
 		sb.append(PortalUtil.getPathContext());
 		sb.append(Portal.PATH_MODULE);
@@ -407,19 +401,21 @@ public class BundleServletContext
 
 	@Override
 	public RequestDispatcher getRequestDispatcher(String path) {
-		String portalContextPath = PortalUtil.getPathContext();
-
 		String contextPath = getContextPath();
 
-		if (Validator.isNotNull(portalContextPath) &&
-			contextPath.startsWith(portalContextPath)) {
+		String portalContextPath = PortalUtil.getPathContext();
 
-			contextPath = contextPath.substring(portalContextPath.length());
+		if (Validator.isNotNull(portalContextPath)) {
+			if (contextPath.startsWith(portalContextPath)) {
+				contextPath = contextPath.substring(portalContextPath.length());
+			}
+
+			if (path.startsWith(portalContextPath)) {
+				path = path.substring(portalContextPath.length());
+			}
 		}
 
-		if (path.startsWith(_PATH_MODULE_SLASH) &&
-			path.startsWith(contextPath)) {
-
+		if (path.startsWith(contextPath)) {
 			path = path.substring(contextPath.length());
 		}
 

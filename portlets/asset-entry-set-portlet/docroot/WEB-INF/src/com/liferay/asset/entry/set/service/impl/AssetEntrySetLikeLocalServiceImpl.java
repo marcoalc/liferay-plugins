@@ -27,6 +27,12 @@ import java.util.List;
 public class AssetEntrySetLikeLocalServiceImpl
 	extends AssetEntrySetLikeLocalServiceBaseImpl {
 
+	public void deleteAssetEntrySetLikes(long assetEntrySetId)
+		throws SystemException {
+
+		assetEntrySetLikePersistence.removeByAssetEntrySetId(assetEntrySetId);
+	}
+
 	@Override
 	public AssetEntrySetLike fetchAssetEntrySetLike(
 			long assetEntrySetId, long classNameId, long classPK)
@@ -37,6 +43,13 @@ public class AssetEntrySetLikeLocalServiceImpl
 
 		return assetEntrySetLikePersistence.fetchByPrimaryKey(
 			assetEntrySetLikePK);
+	}
+
+	public int getAssetEntrySetLikeCount(long assetEntrySetId)
+		throws SystemException {
+
+		return assetEntrySetLikePersistence.countByAssetEntrySetId(
+			assetEntrySetId);
 	}
 
 	@Override

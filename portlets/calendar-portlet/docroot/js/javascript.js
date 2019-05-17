@@ -34,6 +34,8 @@ AUI.add(
 
 		var ICON_ADD_EVENT_NODE = 'iconAddEventNode';
 
+		var REGEX_UNFILLED_PARAMETER = /\{\s*([^|}]+?)\s*(?:\|([^}]*))?\s*\}/g;
+
 		var STR_BLANK = '';
 
 		var STR_COMMA_SPACE = ', ';
@@ -263,6 +265,14 @@ AUI.add(
 				scheduler.syncEventsUI();
 			},
 
+			fillURLParameters: function(url, data) {
+				var instance = this;
+
+				url = Lang.sub(url, data);
+
+				return url.replace(REGEX_UNFILLED_PARAMETER, '');
+			},
+
 			getCalendarBookingInvitees: function(calendarBookingId, callback) {
 				var instance = this;
 
@@ -393,11 +403,53 @@ AUI.add(
 				);
 			},
 
+			invokeActionURL: function(params) {
+				var instance = this;
+
+				var url = Liferay.PortletURL.createActionURL();
+
+				url.setName(params.actionName);
+				url.setPortletId('1_WAR_calendarportlet');
+				url.setWindowState('NORMAL');
+
+				A.each(
+					params.queryParameters,
+					function(item, index, collection) {
+						url.setParameter(index, item);
+					}
+				);
+
+				var payload;
+
+				if (params.payload) {
+					payload = Liferay.Util.ns(instance.PORTLET_NAMESPACE, params.payload);
+				}
+
+				A.io.request(
+					url.toString(),
+					{
+						data: A.merge(
+								payload,
+								{
+									p_auth: Liferay.authToken
+								}
+							),
+						dataType: 'JSON',
+						on: {
+							success: function() {
+								params.callback(this.get('responseData'));
+							}
+						}
+					}
+				);
+			},
+
 			invokeResourceURL: function(params) {
 				var instance = this;
 
 				var url = Liferay.PortletURL.createResourceURL();
 
+				url.setDoAsUserId(Liferay.ThemeDisplay.getDoAsUserIdEncoded());
 				url.setPortletId('1_WAR_calendarportlet');
 				url.setResourceId(params.resourceId);
 
@@ -602,8 +654,9 @@ AUI.add(
 				var startDate = schedulerEvent.get('startDate');
 				var endDate = schedulerEvent.get('endDate');
 
-				instance.invokeResourceURL(
+				instance.invokeActionURL(
 					{
+						actionName: 'updateSchedulerCalendarBooking',
 						callback: function(data) {
 							schedulerEvent.set(
 									'loading',
@@ -648,8 +701,7 @@ AUI.add(
 							startTimeYear: startDate.getFullYear(),
 							title: LString.unescapeHTML(schedulerEvent.get('content')),
 							updateInstance: updateInstance
-						},
-						resourceId: 'updateCalendarBooking'
+						}
 					}
 				);
 			}
@@ -1255,6 +1307,12 @@ AUI.add(
 						instance.load();
 					},
 
+					_afterAddEventModalLoad: function(event) {
+						var instance = this;
+
+						event.target.node.getDOMNode().contentWindow.focus();
+					},
+
 					_afterSchedulerEventChange: function(event) {
 						var instance = this;
 
@@ -1406,7 +1464,7 @@ AUI.add(
 									modal: true
 								},
 								title: Liferay.Language.get('new-calendar-booking'),
-								uri: Lang.sub(
+								uri: CalendarUtil.fillURLParameters(
 									editCalendarBookingURL,
 									{
 										activeView: activeViewName,
@@ -1414,6 +1472,12 @@ AUI.add(
 										titleCurrentValue: ''
 									}
 								)
+							},
+							function(modal) {
+								modal.iframe.on(
+									'load',
+									A.bind(instance._afterAddEventModalLoad, instance)
+								);
 							}
 						);
 					},
@@ -1515,6 +1579,35 @@ AUI.add(
 		);
 
 		Liferay.Scheduler = Scheduler;
+
+		var SchedulerDayView = A.Component.create(
+			{
+				EXTENDS: A.SchedulerDayView,
+
+				NAME: 'scheduler-day-view',
+
+				ATTRS: {
+					navigationDateFormatter: {
+						value: function(date) {
+							var instance = this;
+
+							var scheduler = instance.get('scheduler');
+
+							return A.DataType.Date.format(
+								date,
+								{
+									format: Liferay.Language.get('a-b-d-y'),
+									locale: scheduler.get('locale')
+								}
+							);
+						},
+						validator: isFunction
+					}
+				}
+			}
+		);
+
+		Liferay.SchedulerDayView = SchedulerDayView;
 
 		var SchedulerEventRecorder = A.Component.create(
 			{
@@ -1809,7 +1902,7 @@ AUI.add(
 								},
 								refreshWindow: window,
 								title: Liferay.Language.get('edit-calendar-booking'),
-								uri: Lang.sub(editCalendarBookingURL, data)
+								uri: CalendarUtil.fillURLParameters(editCalendarBookingURL, data)
 							}
 						);
 
@@ -1858,7 +1951,7 @@ AUI.add(
 								},
 								refreshWindow: window,
 								title: Liferay.Language.get('view-calendar-booking-details'),
-								uri: Lang.sub(viewCalendarBookingURL, data)
+								uri: CalendarUtil.fillURLParameters(viewCalendarBookingURL, data)
 							}
 						);
 

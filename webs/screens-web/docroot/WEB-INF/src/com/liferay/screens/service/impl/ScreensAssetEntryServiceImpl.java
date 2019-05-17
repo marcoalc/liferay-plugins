@@ -169,24 +169,22 @@ public class ScreensAssetEntryServiceImpl
 		}
 	}
 
-	protected boolean containsPermission(
-			PermissionChecker permissionChecker, AssetEntry assetEntry,
-			String actionId)
-		throws PortalException {
+	public JSONObject getAssetEntry(long entryId, Locale locale)
+		throws PortalException, SystemException {
 
-		try {
-			return (Boolean)PortalClassInvoker.invoke(
-				false, _containsPermissionMethodKey, permissionChecker,
-				assetEntry, actionId);
-		}
-		catch (PortalException pe) {
-			throw pe;
-		}
-		catch (Exception e) {
-			_log.error(e, e);
-		}
+		return toJSONObject(assetEntryService.getEntry(entryId), locale);
+	}
 
-		return false;
+	public JSONObject getAssetEntry(
+			String className, long classPK, Locale locale)
+		throws PortalException, SystemException {
+
+		invoke(
+			_assetEntryPermissionCheckMethodKey, getPermissionChecker(),
+			className, classPK, ActionKeys.VIEW);
+
+		return toJSONObject(
+			assetEntryLocalService.getEntry(className, classPK), locale);
 	}
 
 	protected List<AssetEntry> filterAssetEntries(List<AssetEntry> assetEntries)
@@ -196,7 +194,8 @@ public class ScreensAssetEntryServiceImpl
 			assetEntries.size());
 
 		for (AssetEntry assetEntry : assetEntries) {
-			if (containsPermission(
+			if ((Boolean)invoke(
+					_assetEntryPermissionContainsMethodKey,
 					getPermissionChecker(), assetEntry, ActionKeys.VIEW)) {
 
 				filteredAssetEntries.add(assetEntry);
@@ -349,6 +348,22 @@ public class ScreensAssetEntryServiceImpl
 		return userJSONObject;
 	}
 
+	protected Object invoke(MethodKey methodKey, Object... args)
+		throws PortalException {
+
+		try {
+			return PortalClassInvoker.invoke(false, methodKey, args);
+		}
+		catch (PortalException pe) {
+			throw pe;
+		}
+		catch (Exception e) {
+			_log.error(e, e);
+		}
+
+		return null;
+	}
+
 	protected JSONArray toJSONArray(
 			List<AssetEntry> assetEntries, Locale locale)
 		throws PortalException, SystemException {
@@ -356,16 +371,7 @@ public class ScreensAssetEntryServiceImpl
 		JSONArray jsonArray = JSONFactoryUtil.createJSONArray();
 
 		for (AssetEntry assetEntry : assetEntries) {
-			JSONObject jsonObject = JSONFactoryUtil.createJSONObject(
-				JSONFactoryUtil.looseSerialize(assetEntry));
-
-			jsonObject.put("className", assetEntry.getClassName());
-			jsonObject.put("description", assetEntry.getDescription(locale));
-			jsonObject.put("locale", String.valueOf(locale));
-			jsonObject.put(
-				"object", getAssetObjectJSONObject(assetEntry, locale));
-			jsonObject.put("summary", assetEntry.getSummary(locale));
-			jsonObject.put("title", assetEntry.getTitle(locale));
+			JSONObject jsonObject = toJSONObject(assetEntry, locale);
 
 			jsonArray.put(jsonObject);
 		}
@@ -373,7 +379,30 @@ public class ScreensAssetEntryServiceImpl
 		return jsonArray;
 	}
 
-	private static final MethodKey _containsPermissionMethodKey =
+	protected JSONObject toJSONObject(AssetEntry assetEntry, Locale locale)
+		throws PortalException, SystemException {
+
+		JSONObject jsonObject = JSONFactoryUtil.createJSONObject(
+			JSONFactoryUtil.looseSerialize(assetEntry));
+
+		jsonObject.put("className", assetEntry.getClassName());
+		jsonObject.put("description", assetEntry.getDescription(locale));
+		jsonObject.put("locale", String.valueOf(locale));
+		jsonObject.put("object", getAssetObjectJSONObject(assetEntry, locale));
+		jsonObject.put("summary", assetEntry.getSummary(locale));
+		jsonObject.put("title", assetEntry.getTitle(locale));
+
+		return jsonObject;
+	}
+
+	private static final MethodKey _assetEntryPermissionCheckMethodKey =
+		new MethodKey(
+			ClassResolverUtil.resolveByPortalClassLoader(
+				"com.liferay.portlet.asset.service.permission." +
+					"AssetEntryPermission"),
+			"check", PermissionChecker.class, String.class, long.class,
+			String.class);
+	private static final MethodKey _assetEntryPermissionContainsMethodKey =
 		new MethodKey(
 			ClassResolverUtil.resolveByPortalClassLoader(
 				"com.liferay.portlet.asset.service.permission." +

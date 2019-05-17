@@ -20,6 +20,7 @@ import com.liferay.calendar.CalendarBookingTitleException;
 import com.liferay.calendar.model.Calendar;
 import com.liferay.calendar.model.CalendarBooking;
 import com.liferay.calendar.model.CalendarBookingConstants;
+import com.liferay.calendar.model.CalendarResource;
 import com.liferay.calendar.notification.NotificationTemplateType;
 import com.liferay.calendar.notification.NotificationType;
 import com.liferay.calendar.recurrence.Recurrence;
@@ -45,6 +46,7 @@ import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.lar.ExportImportThreadLocal;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.sanitizer.Sanitizer;
@@ -64,6 +66,7 @@ import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.uuid.PortalUUIDUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.model.Company;
+import com.liferay.portal.model.Group;
 import com.liferay.portal.model.ResourceConstants;
 import com.liferay.portal.model.SystemEventConstants;
 import com.liferay.portal.model.User;
@@ -143,6 +146,7 @@ public class CalendarBookingLocalServiceImpl
 		CalendarBooking calendarBooking = calendarBookingPersistence.create(
 			calendarBookingId);
 
+		calendarBooking.setUuid(serviceContext.getUuid());
 		calendarBooking.setGroupId(calendar.getGroupId());
 		calendarBooking.setCompanyId(user.getCompanyId());
 		calendarBooking.setUserId(user.getUserId());
@@ -813,6 +817,7 @@ public class CalendarBookingLocalServiceImpl
 		calendarBooking.setGroupId(calendar.getGroupId());
 		calendarBooking.setModifiedDate(serviceContext.getModifiedDate(null));
 		calendarBooking.setCalendarId(calendarId);
+		calendarBooking.setCalendarResourceId(calendar.getCalendarResourceId());
 		calendarBooking.setTitleMap(titleMap, serviceContext.getLocale());
 		calendarBooking.setDescriptionMap(
 			descriptionMap, serviceContext.getLocale());
@@ -829,8 +834,10 @@ public class CalendarBookingLocalServiceImpl
 
 		calendarBookingPersistence.update(calendarBooking);
 
-		addChildCalendarBookings(
-			calendarBooking, childCalendarIds, serviceContext);
+		if (!ExportImportThreadLocal.isImportInProcess()) {
+			addChildCalendarBookings(
+				calendarBooking, childCalendarIds, serviceContext);
+		}
 
 		// Asset
 
@@ -1160,11 +1167,20 @@ public class CalendarBookingLocalServiceImpl
 		boolean sendNotification = ParamUtil.getBoolean(
 			serviceContext, "sendNotification", true);
 
-		if (!sendNotification) {
-			return;
-		}
-
 		try {
+			CalendarBooking parentCalendarBooking =
+				calendarBooking.getParentCalendarBooking();
+
+			CalendarResource calendarResource =
+				parentCalendarBooking.getCalendarResource();
+
+			Group group = groupLocalService.getGroup(
+				calendarResource.getGroupId());
+
+			if (!sendNotification || group.isStagingGroup()) {
+				return;
+			}
+
 			User sender = userLocalService.fetchUser(
 				serviceContext.getUserId());
 

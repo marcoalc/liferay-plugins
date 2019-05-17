@@ -90,35 +90,45 @@ public class SolrIndexSearcher extends BaseIndexSearcher {
 		stopWatch.start();
 
 		try {
-			int total = (int)searchCount(searchContext, query);
-
-			if (total > INDEX_SEARCH_LIMIT) {
-				total = INDEX_SEARCH_LIMIT;
-			}
-
 			int start = searchContext.getStart();
 			int end = searchContext.getEnd();
 
-			if ((searchContext.getStart() == QueryUtil.ALL_POS) &&
-				(searchContext.getEnd() == QueryUtil.ALL_POS)) {
-
+			if (start == QueryUtil.ALL_POS) {
 				start = 0;
-				end = total;
+			}
+			else if (start < 0) {
+				throw new IllegalArgumentException("Invalid start " + start);
 			}
 
-			int[] startAndEnd = SearchPaginationUtil.calculateStartAndEnd(
-				start, end, total);
+			if (end == QueryUtil.ALL_POS) {
+				end = INDEX_SEARCH_LIMIT;
+			}
+			else if (end < 0) {
+				throw new IllegalArgumentException("Invalid end " + end);
+			}
 
-			start = startAndEnd[0];
-			end = startAndEnd[1];
+			QueryResponse queryResponse = null;
+			Hits hits = null;
 
-			QueryResponse queryResponse = search(
-				searchContext, query, start, end, false);
+			while (true) {
+				queryResponse = search(searchContext, query, start, end, false);
 
-			Hits hits = processQueryResponse(
-				queryResponse, searchContext, query);
+				hits = processQueryResponse(
+					queryResponse, searchContext, query);
 
-			hits.setLength(total);
+				Document[] documents = hits.getDocs();
+
+				if ((documents.length != 0) || (start == 0)) {
+					break;
+				}
+
+				int[] startAndEnd = SearchPaginationUtil.calculateStartAndEnd(
+					start, end, hits.getLength());
+
+				start = startAndEnd[0];
+				end = startAndEnd[1];
+			}
+
 			hits.setStart(stopWatch.getStartTime());
 
 			return hits;
@@ -497,6 +507,11 @@ public class SolrIndexSearcher extends BaseIndexSearcher {
 		QueryTranslatorUtil.translateForSolr(query);
 
 		String queryString = query.toString();
+
+		SolrExpandoPostProcessor solrExpandoPostProcessor =
+			new SolrExpandoPostProcessor(queryString);
+
+		queryString = solrExpandoPostProcessor.postProcess();
 
 		StringBundler sb = new StringBundler(6);
 

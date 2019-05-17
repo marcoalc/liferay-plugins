@@ -17,6 +17,7 @@ package com.liferay.knowledgebase.admin.lar;
 import com.liferay.knowledgebase.model.KBArticle;
 import com.liferay.knowledgebase.model.KBComment;
 import com.liferay.knowledgebase.model.KBTemplate;
+import com.liferay.knowledgebase.service.ClpSerializer;
 import com.liferay.knowledgebase.service.KBArticleLocalServiceUtil;
 import com.liferay.knowledgebase.service.KBTemplateLocalServiceUtil;
 import com.liferay.knowledgebase.service.persistence.KBArticleExportActionableDynamicQuery;
@@ -25,7 +26,9 @@ import com.liferay.knowledgebase.service.persistence.KBTemplateExportActionableD
 import com.liferay.knowledgebase.util.comparator.KBArticleVersionComparator;
 import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
+import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.OrderFactoryUtil;
+import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.lar.BasePortletDataHandler;
 import com.liferay.portal.kernel.lar.DataLevel;
 import com.liferay.portal.kernel.lar.PortletDataContext;
@@ -187,9 +190,27 @@ public class AdminPortletDataHandler extends BasePortletDataHandler {
 		return new KBArticleExportActionableDynamicQuery(portletDataContext) {
 
 			@Override
-			protected void addOrderCriteria(DynamicQuery dynamicQuery) {
+			protected void addCriteria(DynamicQuery dynamicQuery) {
+				super.addCriteria(dynamicQuery);
+
 				OrderFactoryUtil.addOrderByComparator(
 					dynamicQuery, new KBArticleVersionComparator(true));
+			}
+
+			protected void addCriteriaForCount(DynamicQuery dynamicQuery) {
+				super.addCriteria(dynamicQuery);
+			}
+
+			@Override
+			protected long doPerformCount() throws SystemException {
+				DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
+					KBArticle.class, ClpSerializer.class.getClassLoader());
+
+				addCriteriaForCount(dynamicQuery);
+				addDefaultCriteria(dynamicQuery);
+
+				return KBArticleLocalServiceUtil.dynamicQueryCount(
+					dynamicQuery, getCountProjection());
 			}
 
 		};

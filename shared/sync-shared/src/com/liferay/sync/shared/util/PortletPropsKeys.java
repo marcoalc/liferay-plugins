@@ -22,6 +22,9 @@ public class PortletPropsKeys {
 	public static final String SYNC_ALLOW_USER_PERSONAL_SITES =
 		"sync.allow.user.personal.sites";
 
+	public static final String SYNC_CLIENT_FORCE_SECURITY_MODE =
+		"sync.client.force.security.mode";
+
 	public static final String SYNC_CLIENT_MAX_CONNECTIONS =
 		"sync.client.max.connections";
 
@@ -45,6 +48,8 @@ public class PortletPropsKeys {
 
 	public static final String SYNC_CONTEXT_MODIFIED_TIME =
 		"sync.context.modified.time";
+
+	public static final String SYNC_LAN_ENABLED = "sync.lan.enabled";
 
 	public static final String SYNC_OAUTH_APPLICATION_ID =
 		"sync.oauth.application.id";

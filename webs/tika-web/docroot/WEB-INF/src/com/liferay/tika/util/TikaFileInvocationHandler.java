@@ -14,6 +14,7 @@
 
 package com.liferay.tika.util;
 
+import com.liferay.compat.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.File;
@@ -26,7 +27,6 @@ import java.lang.reflect.Method;
 
 import org.apache.commons.compress.archivers.zip.UnsupportedZipFeatureException;
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.pdfbox.exceptions.CryptographyException;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
@@ -66,20 +66,27 @@ public class TikaFileInvocationHandler implements InvocationHandler {
 	protected String extractText(
 		InputStream is, String fileName, int maxStringLength) {
 
+		if (maxStringLength == 0) {
+			return StringPool.BLANK;
+		}
+
 		String text = null;
 
 		try {
 			Tika tika = new Tika();
 
-			tika.setMaxStringLength(maxStringLength);
+			tika.setMaxStringLength(-1);
 
 			text = tika.parseToString(is);
+
+			if (maxStringLength != -1) {
+				text = StringUtil.shorten(text, maxStringLength);
+			}
 		}
 		catch (Exception e) {
 			Throwable throwable = ExceptionUtils.getRootCause(e);
 
-			if ((throwable instanceof CryptographyException) ||
-				(throwable instanceof EncryptedDocumentException) ||
+			if ((throwable instanceof EncryptedDocumentException) ||
 				(throwable instanceof UnsupportedZipFeatureException)) {
 
 				if (_log.isWarnEnabled()) {

@@ -81,6 +81,20 @@ public class ScreensAssetEntryServiceUtil {
 			locale, max);
 	}
 
+	public static com.liferay.portal.kernel.json.JSONObject getAssetEntry(
+		long entryId, java.util.Locale locale)
+		throws com.liferay.portal.kernel.exception.PortalException,
+			com.liferay.portal.kernel.exception.SystemException {
+		return getService().getAssetEntry(entryId, locale);
+	}
+
+	public static com.liferay.portal.kernel.json.JSONObject getAssetEntry(
+		java.lang.String className, long classPK, java.util.Locale locale)
+		throws com.liferay.portal.kernel.exception.PortalException,
+			com.liferay.portal.kernel.exception.SystemException {
+		return getService().getAssetEntry(className, classPK, locale);
+	}
+
 	public static void clearService() {
 		_service = null;
 	}

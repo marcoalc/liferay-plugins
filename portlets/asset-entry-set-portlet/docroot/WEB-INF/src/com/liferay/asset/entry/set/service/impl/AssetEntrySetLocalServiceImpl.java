@@ -53,7 +53,6 @@ import com.liferay.util.portlet.PortletProps;
 import java.io.File;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -71,9 +70,10 @@ public class AssetEntrySetLocalServiceImpl
 
 	@Override
 	public AssetEntrySet addAssetEntrySet(
-			long userId, long parentAssetEntrySetId, long creatorClassNameId,
-			long creatorClassPK, JSONObject payloadJSONObject,
-			boolean privateAssetEntrySet, long stickyTime, int type)
+			long userId, long parentAssetEntrySetId, long classNameId,
+			long classPK, long creatorClassNameId, long creatorClassPK,
+			JSONObject payloadJSONObject, boolean privateAssetEntrySet,
+			long stickyTime, String title, int type, int status)
 		throws PortalException, SystemException {
 
 		long assetEntrySetId = counterLocalService.increment();
@@ -86,17 +86,21 @@ public class AssetEntrySetLocalServiceImpl
 		assetEntrySet.setCompanyId(user.getCompanyId());
 		assetEntrySet.setUserId(user.getUserId());
 
-		Date now = new Date();
+		long currentTime = System.currentTimeMillis();
 
-		assetEntrySet.setCreateTime(now.getTime());
-		assetEntrySet.setModifiedTime(now.getTime());
+		assetEntrySet.setCreateTime(currentTime);
+		assetEntrySet.setModifiedTime(currentTime);
 
 		assetEntrySet.setParentAssetEntrySetId(parentAssetEntrySetId);
+		assetEntrySet.setClassNameId(classNameId);
+		assetEntrySet.setClassPK(classPK);
 		assetEntrySet.setCreatorClassNameId(creatorClassNameId);
 		assetEntrySet.setCreatorClassPK(creatorClassPK);
 		assetEntrySet.setCreatorName(
 			AssetEntrySetParticipantInfoUtil.getParticipantName(
 				creatorClassNameId, creatorClassPK));
+
+		assetEntrySet.setLevel(getLevel(parentAssetEntrySetId));
 
 		filterAssetTagNames(payloadJSONObject);
 
@@ -107,12 +111,14 @@ public class AssetEntrySetLocalServiceImpl
 
 		assetEntrySet.setPrivateAssetEntrySet(privateAssetEntrySet);
 		assetEntrySet.setStickyTime(stickyTime);
+		assetEntrySet.setTitle(title);
 		assetEntrySet.setType(type);
+		assetEntrySet.setStatus(status);
 
 		assetEntrySetPersistence.update(assetEntrySet);
 
 		updateChildAssetEntrySetsCount(parentAssetEntrySetId);
-		updateModifiedTime(parentAssetEntrySetId, now.getTime());
+		updateModifiedTime(parentAssetEntrySetId, currentTime);
 
 		updateAssetEntry(
 			assetEntrySet,
@@ -158,22 +164,33 @@ public class AssetEntrySetLocalServiceImpl
 		assetEntryLocalService.deleteEntry(
 			AssetEntrySet.class.getName(), assetEntrySet.getAssetEntrySetId());
 
+		assetEntrySetLikeLocalService.deleteAssetEntrySetLikes(
+			assetEntrySet.getAssetEntrySetId());
+
 		AssetSharingEntryLocalServiceUtil.deleteAssetSharingEntries(
 			AssetEntrySetConstants.ASSET_ENTRY_SET_CLASS_NAME_ID,
 			assetEntrySet.getAssetEntrySetId());
 
-		if (assetEntrySet.getParentAssetEntrySetId() == 0) {
+		if (assetEntrySet.getChildAssetEntrySetsCount() > 0) {
 			deleteChildAssetEntrySets(assetEntrySet.getAssetEntrySetId());
 		}
-		else {
+
+		Indexer indexer = IndexerRegistryUtil.nullSafeGetIndexer(
+			AssetEntrySet.class);
+
+		if (assetEntrySet.getParentAssetEntrySetId() > 0) {
 			AssetEntrySet parentAssetEntrySet = fetchAssetEntrySet(
 				assetEntrySet.getParentAssetEntrySetId());
 
 			if (parentAssetEntrySet != null) {
 				updateAssetSharingEntries(parentAssetEntrySet);
-
 				updateChildAssetEntrySetsCount(
 					parentAssetEntrySet.getAssetEntrySetId());
+				updateModifiedTime(
+					parentAssetEntrySet.getAssetEntrySetId(),
+					System.currentTimeMillis());
+
+				indexer.reindex(parentAssetEntrySet);
 			}
 		}
 
@@ -183,9 +200,6 @@ public class AssetEntrySetLocalServiceImpl
 		for (long fileEntryId : fileEntryIds) {
 			DLFileEntryLocalServiceUtil.deleteFileEntry(fileEntryId);
 		}
-
-		Indexer indexer = IndexerRegistryUtil.nullSafeGetIndexer(
-			AssetEntrySet.class);
 
 		indexer.delete(assetEntrySet);
 
@@ -203,6 +217,30 @@ public class AssetEntrySetLocalServiceImpl
 	}
 
 	@Override
+	public AssetEntrySet fetchAssetEntrySet(
+			long classNameId, long classPK, String title)
+		throws SystemException {
+
+		return assetEntrySetPersistence.fetchByCNI_CPK_Title(
+			classNameId, classPK, title);
+	}
+
+	@Override
+	public List<AssetEntrySet> getAssetEntrySets(long classNameId, long classPK)
+		throws SystemException {
+
+		return assetEntrySetPersistence.findByCNI_CPK(classNameId, classPK);
+	}
+
+	@Override
+	public long getAssetEntrySetsCount(long classNameId, long classPK, int type)
+		throws SystemException {
+
+		return assetEntrySetPersistence.countByCNI_CPK_Type(
+			classNameId, classPK, type);
+	}
+
+	@Override
 	public List<AssetEntrySet> getChildAssetEntrySets(
 			long parentAssetEntrySetId)
 		throws SystemException {
@@ -212,78 +250,27 @@ public class AssetEntrySetLocalServiceImpl
 	}
 
 	@Override
-	public List<AssetEntrySet> getNewAssetEntrySets(
-			long userId, long time, boolean modifiedTime,
-			long parentAssetEntrySetId, long stickyTime,
-			JSONArray creatorJSONArray, JSONArray sharedToJSONArray,
-			long[] includeAssetEntrySetIds, long[] excludeAssetEntrySetIds,
-			String[] assetTagNames, int start, int end)
-		throws PortalException, SystemException {
+	public long getChildAssetEntrySetsCount(long parentAssetEntrySetId)
+		throws SystemException {
 
-		return getAssetEntrySets(
-			userId, time, true, modifiedTime, parentAssetEntrySetId, stickyTime,
-			creatorJSONArray, sharedToJSONArray, includeAssetEntrySetIds,
-			excludeAssetEntrySetIds, assetTagNames, start, end);
-	}
-
-	@Override
-	public List<AssetEntrySet> getNewAssetEntrySets(
-			long userId, long createTime, long parentAssetEntrySetId,
-			long stickyTime, int type, JSONArray sharedToJSONArray,
-			String[] assetTagNames, int start, int end)
-		throws PortalException, SystemException {
-
-		return getAssetEntrySets(
-			userId, createTime, true, parentAssetEntrySetId, stickyTime, type,
-			sharedToJSONArray, assetTagNames, start, end);
+		return assetEntrySetPersistence.countByParentAssetEntrySetId(
+			parentAssetEntrySetId);
 	}
 
 	@Override
 	public List<AssetEntrySet> getNewChildAssetEntrySets(
-			long userId, long createTime, long parentAssetEntrySetId, int start,
-			int end, OrderByComparator orderByComparator)
+			long createTime, long parentAssetEntrySetId, int start, int end,
+			OrderByComparator orderByComparator)
 		throws PortalException, SystemException {
 
-		List<AssetEntrySet> assetEntrySets =
-			assetEntrySetPersistence.findByGtCT_PAESI(
-				createTime, parentAssetEntrySetId, start, end,
-				orderByComparator);
-
-		return assetEntrySets;
-	}
-
-	@Override
-	public List<AssetEntrySet> getOldAssetEntrySets(
-			long userId, long time, boolean modifiedTime,
-			long parentAssetEntrySetId, long stickyTime,
-			JSONArray creatorJSONArray, JSONArray sharedToJSONArray,
-			long[] includeAssetEntrySetIds, long[] excludeAssetEntrySetIds,
-			String[] assetTagNames, int start, int end)
-		throws PortalException, SystemException {
-
-		return getAssetEntrySets(
-			userId, time, false, modifiedTime, parentAssetEntrySetId,
-			stickyTime, creatorJSONArray, sharedToJSONArray,
-			includeAssetEntrySetIds, excludeAssetEntrySetIds, assetTagNames,
-			start, end);
-	}
-
-	@Override
-	public List<AssetEntrySet> getOldAssetEntrySets(
-			long userId, long createTime, long parentAssetEntrySetId,
-			long stickyTime, int type, JSONArray sharedToJSONArray,
-			String[] assetTagNames, int start, int end)
-		throws PortalException, SystemException {
-
-		return getAssetEntrySets(
-			userId, createTime, false, parentAssetEntrySetId, stickyTime, type,
-			sharedToJSONArray, assetTagNames, start, end);
+		return assetEntrySetPersistence.findByGtCT_PAESI(
+			createTime, parentAssetEntrySetId, start, end, orderByComparator);
 	}
 
 	@Override
 	public List<AssetEntrySet> getOldChildAssetEntrySets(
-			long userId, long createTime, long parentAssetEntrySetId, int start,
-			int end, OrderByComparator orderByComparator)
+			long createTime, long parentAssetEntrySetId, int start, int end,
+			OrderByComparator orderByComparator)
 		throws PortalException, SystemException {
 
 		List<AssetEntrySet> assetEntrySets =
@@ -321,7 +308,8 @@ public class AssetEntrySetLocalServiceImpl
 	@Override
 	public AssetEntrySet updateAssetEntrySet(
 			long assetEntrySetId, JSONObject payloadJSONObject,
-			boolean privateAssetEntrySet, long stickyTime, int type)
+			boolean privateAssetEntrySet, long stickyTime, String title,
+			int type, int status)
 		throws PortalException, SystemException {
 
 		AssetEntrySet assetEntrySet = assetEntrySetPersistence.findByPrimaryKey(
@@ -361,9 +349,7 @@ public class AssetEntrySetLocalServiceImpl
 			updateAssetSharingEntries = false;
 		}
 
-		Date now = new Date();
-
-		assetEntrySet.setModifiedTime(now.getTime());
+		assetEntrySet.setModifiedTime(System.currentTimeMillis());
 
 		filterAssetTagNames(payloadJSONObject);
 
@@ -372,7 +358,9 @@ public class AssetEntrySetLocalServiceImpl
 
 		assetEntrySet.setPrivateAssetEntrySet(privateAssetEntrySet);
 		assetEntrySet.setStickyTime(stickyTime);
+		assetEntrySet.setTitle(title);
 		assetEntrySet.setType(type);
+		assetEntrySet.setStatus(status);
 
 		assetEntrySetPersistence.update(assetEntrySet);
 
@@ -423,54 +411,6 @@ public class AssetEntrySetLocalServiceImpl
 			StringUtil.merge(newAssetTagNames));
 	}
 
-	protected List<AssetEntrySet> getAssetEntrySets(
-			long userId, long time, boolean gtTime, boolean modifiedTime,
-			long parentAssetEntrySetId, long stickyTime,
-			JSONArray creatorJSONArray, JSONArray sharedToJSONArray,
-			long[] includeAssetEntrySetIds, long[] excludeAssetEntrySetIds,
-			String[] assetTagNames, int start, int end)
-		throws PortalException, SystemException {
-
-		ObjectValuePair<Long, Long> classNameIdAndClassPKOVP =
-			AssetEntrySetParticipantInfoUtil.getClassNameIdAndClassPKOVP(
-				userId);
-
-		if (!modifiedTime) {
-			return assetEntrySetFinder.findByCT_PAESI_ST_CNI(
-				classNameIdAndClassPKOVP.getKey(),
-				classNameIdAndClassPKOVP.getValue(), time, gtTime,
-				parentAssetEntrySetId, stickyTime, creatorJSONArray,
-				sharedToJSONArray, includeAssetEntrySetIds,
-				excludeAssetEntrySetIds, assetTagNames, start, end);
-		}
-		else {
-			return assetEntrySetFinder.findByMT_PAESI_ST_CNI(
-				classNameIdAndClassPKOVP.getKey(),
-				classNameIdAndClassPKOVP.getValue(), time, gtTime,
-				parentAssetEntrySetId, stickyTime, creatorJSONArray,
-				sharedToJSONArray, includeAssetEntrySetIds,
-				excludeAssetEntrySetIds, assetTagNames, start, end);
-		}
-	}
-
-	protected List<AssetEntrySet> getAssetEntrySets(
-			long userId, long createTime, boolean gtCreateTime,
-			long parentAssetEntrySetId, long stickyTime, int type,
-			JSONArray sharedToJSONArray, String[] assetTagNames, int start,
-			int end)
-		throws PortalException, SystemException {
-
-		ObjectValuePair<Long, Long> classNameIdAndClassPKOVP =
-			AssetEntrySetParticipantInfoUtil.getClassNameIdAndClassPKOVP(
-				userId);
-
-		return assetEntrySetFinder.findByCT_PAESI_ST_T_CNI(
-			classNameIdAndClassPKOVP.getKey(),
-			classNameIdAndClassPKOVP.getValue(), createTime, gtCreateTime,
-			parentAssetEntrySetId, stickyTime, type, sharedToJSONArray,
-			assetTagNames, start, end);
-	}
-
 	protected List<Long> getFileEntryIds(JSONObject payloadJSONObject)
 		throws PortalException, SystemException {
 
@@ -500,6 +440,23 @@ public class AssetEntrySetLocalServiceImpl
 		return fileEntryIds;
 	}
 
+	protected int getLevel(long parentAssetEntrySetId)
+		throws PortalException, SystemException {
+
+		int level = 0;
+
+		while (parentAssetEntrySetId > 0) {
+			level++;
+
+			AssetEntrySet assetEntrySet = getAssetEntrySet(
+				parentAssetEntrySetId);
+
+			parentAssetEntrySetId = assetEntrySet.getParentAssetEntrySetId();
+		}
+
+		return level;
+	}
+
 	protected Map<Long, Set<Long>> getSharedToClassPKsMap(
 			AssetEntrySet assetEntrySet)
 		throws PortalException, SystemException {
@@ -520,15 +477,25 @@ public class AssetEntrySetLocalServiceImpl
 		for (int i = 0; i < sharedToJSONArray.length(); i++) {
 			JSONObject sharedToJSONObject = sharedToJSONArray.getJSONObject(i);
 
-			long classNameId = sharedToJSONObject.getLong("classNameId");
-			long classPK = sharedToJSONObject.getLong("classPK");
+			long entityClassNameId = sharedToJSONObject.getLong(
+				"entityClassNameId");
+			long entityClassPK = sharedToJSONObject.getLong("entityClassPK");
 
-			setSharedToClassPKsMap(sharedToClassPKsMap, classNameId, classPK);
+			setSharedToClassPKsMap(
+				sharedToClassPKsMap, entityClassNameId, entityClassPK);
 		}
 
 		setSharedToClassPKsMap(
 			sharedToClassPKsMap, assetEntrySet.getCreatorClassNameId(),
 			assetEntrySet.getCreatorClassPK());
+
+		ObjectValuePair<Long, Long> classNameIdAndClassPKOVP =
+			AssetEntrySetParticipantInfoUtil.getClassNameIdAndClassPKOVP(
+				assetEntrySet.getUserId());
+
+		setSharedToClassPKsMap(
+			sharedToClassPKsMap, classNameIdAndClassPKOVP.getKey(),
+			classNameIdAndClassPKOVP.getValue());
 
 		return sharedToClassPKsMap;
 	}
@@ -639,7 +606,7 @@ public class AssetEntrySetLocalServiceImpl
 		Map<Long, Set<Long>> sharedToClassPKsMap = getSharedToClassPKsMap(
 			assetEntrySet);
 
-		if (assetEntrySet.getParentAssetEntrySetId() == 0) {
+		if (assetEntrySet.getChildAssetEntrySetsCount() > 0) {
 			List<AssetEntrySetReference>
 				assetEntrySetReferences =
 					AssetEntrySetFinderUtil.
@@ -700,6 +667,11 @@ public class AssetEntrySetLocalServiceImpl
 		assetEntrySet.setModifiedTime(modifiedTime);
 
 		assetEntrySetPersistence.update(assetEntrySet);
+
+		if (assetEntrySet.getParentAssetEntrySetId() > 0) {
+			updateModifiedTime(
+				assetEntrySet.getParentAssetEntrySetId(), modifiedTime);
+		}
 	}
 
 	private static final int _ASSET_TAG_NAME_MAX_LENGTH = 75;

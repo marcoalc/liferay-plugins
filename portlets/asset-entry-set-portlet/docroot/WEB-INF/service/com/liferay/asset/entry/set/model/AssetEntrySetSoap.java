@@ -37,15 +37,20 @@ public class AssetEntrySetSoap implements Serializable {
 		soapModel.setModifiedTime(model.getModifiedTime());
 		soapModel.setAssetEntryId(model.getAssetEntryId());
 		soapModel.setParentAssetEntrySetId(model.getParentAssetEntrySetId());
+		soapModel.setClassNameId(model.getClassNameId());
+		soapModel.setClassPK(model.getClassPK());
 		soapModel.setCreatorClassNameId(model.getCreatorClassNameId());
 		soapModel.setCreatorClassPK(model.getCreatorClassPK());
 		soapModel.setCreatorName(model.getCreatorName());
-		soapModel.setPayload(model.getPayload());
-		soapModel.setChildAssetEntrySetsCount(model.getChildAssetEntrySetsCount());
 		soapModel.setAssetEntrySetLikesCount(model.getAssetEntrySetLikesCount());
+		soapModel.setChildAssetEntrySetsCount(model.getChildAssetEntrySetsCount());
+		soapModel.setLevel(model.getLevel());
+		soapModel.setPayload(model.getPayload());
 		soapModel.setPrivateAssetEntrySet(model.getPrivateAssetEntrySet());
 		soapModel.setStickyTime(model.getStickyTime());
+		soapModel.setTitle(model.getTitle());
 		soapModel.setType(model.getType());
+		soapModel.setStatus(model.getStatus());
 
 		return soapModel;
 	}
@@ -154,6 +159,22 @@ public class AssetEntrySetSoap implements Serializable {
 		_parentAssetEntrySetId = parentAssetEntrySetId;
 	}
 
+	public long getClassNameId() {
+		return _classNameId;
+	}
+
+	public void setClassNameId(long classNameId) {
+		_classNameId = classNameId;
+	}
+
+	public long getClassPK() {
+		return _classPK;
+	}
+
+	public void setClassPK(long classPK) {
+		_classPK = classPK;
+	}
+
 	public long getCreatorClassNameId() {
 		return _creatorClassNameId;
 	}
@@ -178,12 +199,12 @@ public class AssetEntrySetSoap implements Serializable {
 		_creatorName = creatorName;
 	}
 
-	public String getPayload() {
-		return _payload;
+	public int getAssetEntrySetLikesCount() {
+		return _assetEntrySetLikesCount;
 	}
 
-	public void setPayload(String payload) {
-		_payload = payload;
+	public void setAssetEntrySetLikesCount(int assetEntrySetLikesCount) {
+		_assetEntrySetLikesCount = assetEntrySetLikesCount;
 	}
 
 	public int getChildAssetEntrySetsCount() {
@@ -194,12 +215,20 @@ public class AssetEntrySetSoap implements Serializable {
 		_childAssetEntrySetsCount = childAssetEntrySetsCount;
 	}
 
-	public int getAssetEntrySetLikesCount() {
-		return _assetEntrySetLikesCount;
+	public int getLevel() {
+		return _level;
 	}
 
-	public void setAssetEntrySetLikesCount(int assetEntrySetLikesCount) {
-		_assetEntrySetLikesCount = assetEntrySetLikesCount;
+	public void setLevel(int level) {
+		_level = level;
+	}
+
+	public String getPayload() {
+		return _payload;
+	}
+
+	public void setPayload(String payload) {
+		_payload = payload;
 	}
 
 	public boolean getPrivateAssetEntrySet() {
@@ -222,12 +251,28 @@ public class AssetEntrySetSoap implements Serializable {
 		_stickyTime = stickyTime;
 	}
 
+	public String getTitle() {
+		return _title;
+	}
+
+	public void setTitle(String title) {
+		_title = title;
+	}
+
 	public int getType() {
 		return _type;
 	}
 
 	public void setType(int type) {
 		_type = type;
+	}
+
+	public int getStatus() {
+		return _status;
+	}
+
+	public void setStatus(int status) {
+		_status = status;
 	}
 
 	private long _assetEntrySetId;
@@ -237,13 +282,18 @@ public class AssetEntrySetSoap implements Serializable {
 	private long _modifiedTime;
 	private long _assetEntryId;
 	private long _parentAssetEntrySetId;
+	private long _classNameId;
+	private long _classPK;
 	private long _creatorClassNameId;
 	private long _creatorClassPK;
 	private String _creatorName;
-	private String _payload;
-	private int _childAssetEntrySetsCount;
 	private int _assetEntrySetLikesCount;
+	private int _childAssetEntrySetsCount;
+	private int _level;
+	private String _payload;
 	private boolean _privateAssetEntrySet;
 	private long _stickyTime;
+	private String _title;
 	private int _type;
+	private int _status;
 }

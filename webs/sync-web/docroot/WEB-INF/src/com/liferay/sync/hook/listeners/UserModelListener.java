@@ -16,19 +16,25 @@ package com.liferay.sync.hook.listeners;
 
 import com.liferay.portal.ModelListenerException;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
-import com.liferay.portal.model.BaseModelListener;
+import com.liferay.portal.model.ResourcePermission;
+import com.liferay.portal.model.Role;
 import com.liferay.portal.model.User;
+import com.liferay.portal.security.permission.ActionKeys;
+import com.liferay.portal.service.ResourcePermissionLocalServiceUtil;
 import com.liferay.portal.service.UserLocalServiceUtil;
+import com.liferay.sync.model.SyncDLObject;
 import com.liferay.sync.model.SyncDevice;
+import com.liferay.sync.service.SyncDLObjectLocalServiceUtil;
 import com.liferay.sync.service.SyncDeviceLocalServiceUtil;
 import com.liferay.sync.shared.util.SyncDeviceConstants;
 
+import java.util.Date;
 import java.util.List;
 
 /**
  * @author Jonsthan McCann
  */
-public class UserModelListener extends BaseModelListener<User> {
+public class UserModelListener extends SyncBaseModelListener<User> {
 
 	@Override
 	public void onAfterRemove(User user) throws ModelListenerException {
@@ -41,6 +47,78 @@ public class UserModelListener extends BaseModelListener<User> {
 
 				for (SyncDevice syncDevice : syncDevices) {
 					SyncDeviceLocalServiceUtil.deleteSyncDevice(syncDevice);
+				}
+			}
+		}
+		catch (Exception e) {
+			throw new ModelListenerException(e);
+		}
+	}
+
+	@Override
+	public void onBeforeAddAssociation(
+			Object classPK, String associationClassName,
+			Object associationClassPK)
+		throws ModelListenerException {
+
+		if (!associationClassName.equals(Role.class.getName())) {
+			return;
+		}
+
+		try {
+			List<ResourcePermission> resourcePermissions =
+				ResourcePermissionLocalServiceUtil.getRoleResourcePermissions(
+					(Long)associationClassPK);
+
+			for (ResourcePermission resourcePermission : resourcePermissions) {
+				if (resourcePermission.hasActionId(ActionKeys.VIEW)) {
+					SyncDLObject syncDLObject = fetchSyncDLObject(
+						resourcePermission);
+
+					if (syncDLObject == null) {
+						continue;
+					}
+
+					updateSyncDLObject(syncDLObject);
+				}
+			}
+		}
+		catch (Exception e) {
+			throw new ModelListenerException(e);
+		}
+	}
+
+	@Override
+	public void onBeforeRemoveAssociation(
+			Object classPK, String associationClassName,
+			Object associationClassPK)
+		throws ModelListenerException {
+
+		if (!associationClassName.equals(Role.class.getName())) {
+			return;
+		}
+
+		try {
+			List<ResourcePermission> resourcePermissions =
+				ResourcePermissionLocalServiceUtil.getRoleResourcePermissions(
+					(Long)associationClassPK);
+
+			for (ResourcePermission resourcePermission : resourcePermissions) {
+				if (resourcePermission.hasActionId(ActionKeys.VIEW)) {
+					SyncDLObject syncDLObject = fetchSyncDLObject(
+						resourcePermission);
+
+					if (syncDLObject == null) {
+						continue;
+					}
+
+					Date date = new Date();
+
+					syncDLObject.setModifiedTime(date.getTime());
+					syncDLObject.setLastPermissionChangeDate(date);
+
+					SyncDLObjectLocalServiceUtil.updateSyncDLObject(
+						syncDLObject);
 				}
 			}
 		}

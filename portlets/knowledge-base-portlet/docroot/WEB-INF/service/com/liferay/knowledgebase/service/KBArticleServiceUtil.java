@@ -128,6 +128,16 @@ public class KBArticleServiceUtil {
 		return getService().fetchLatestKBArticle(resourcePrimKey, status);
 	}
 
+	public static java.util.List<com.liferay.knowledgebase.model.KBArticle> getAllDescendantKBArticles(
+		long groupId, long resourcePrimKey, int status,
+		com.liferay.portal.kernel.util.OrderByComparator orderByComparator)
+		throws com.liferay.portal.kernel.exception.PortalException,
+			com.liferay.portal.kernel.exception.SystemException {
+		return getService()
+				   .getAllDescendantKBArticles(groupId, resourcePrimKey,
+			status, orderByComparator);
+	}
+
 	public static java.util.List<com.liferay.knowledgebase.model.KBArticle> getGroupKBArticles(
 		long groupId, int status, int start, int end,
 		com.liferay.portal.kernel.util.OrderByComparator orderByComparator)

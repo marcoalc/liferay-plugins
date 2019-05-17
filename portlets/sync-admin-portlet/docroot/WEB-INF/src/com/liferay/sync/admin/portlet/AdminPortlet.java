@@ -15,7 +15,6 @@
 package com.liferay.sync.admin.portlet;
 
 import com.liferay.portal.kernel.deploy.DeployManagerUtil;
-import com.liferay.portal.kernel.plugin.PluginPackage;
 import com.liferay.portal.kernel.servlet.SessionErrors;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.PrefsPropsUtil;
@@ -126,6 +125,18 @@ public class AdminPortlet extends MVCPortlet {
 		portletPreferences.setValue(
 			PortletPropsKeys.SYNC_SERVICES_ENABLED, String.valueOf(enabled));
 
+		boolean forceSecurityMode = ParamUtil.getBoolean(
+			actionRequest, "forceSecurityMode");
+
+		portletPreferences.setValue(
+			PortletPropsKeys.SYNC_CLIENT_FORCE_SECURITY_MODE,
+			String.valueOf(forceSecurityMode));
+
+		boolean lanEnabled = ParamUtil.getBoolean(actionRequest, "lanEnabled");
+
+		portletPreferences.setValue(
+			PortletPropsKeys.SYNC_LAN_ENABLED, String.valueOf(lanEnabled));
+
 		int maxConnections = ParamUtil.getInteger(
 			actionRequest, "maxConnections");
 
@@ -165,11 +176,13 @@ public class AdminPortlet extends MVCPortlet {
 
 		portletPreferences.store();
 
-		if (oAuthEnabled) {
-			PluginPackage oAuthPortletPluginPackage =
-				DeployManagerUtil.getInstalledPluginPackage("oauth-portlet");
+		if (lanEnabled) {
+			SyncPreferencesLocalServiceUtil.enableLanSync(
+				CompanyThreadLocal.getCompanyId());
+		}
 
-			if (oAuthPortletPluginPackage == null) {
+		if (oAuthEnabled) {
+			if (!DeployManagerUtil.isDeployed("oauth-portlet")) {
 				SessionErrors.add(
 					actionRequest, OAuthPortletUndeployedException.class);
 

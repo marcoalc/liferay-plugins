@@ -118,64 +118,48 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 		_methodName19 = "addAssetEntrySet";
 
 		_methodParameterTypes19 = new String[] {
-				"long", "long", "long", "long",
+				"long", "long", "long", "long", "long", "long",
 				"com.liferay.portal.kernel.json.JSONObject", "boolean", "long",
-				"int"
+				"java.lang.String", "int", "int"
 			};
 
 		_methodName20 = "addFileAttachment";
 
 		_methodParameterTypes20 = new String[] { "long", "java.io.File" };
 
-		_methodName21 = "getChildAssetEntrySets";
+		_methodName21 = "fetchAssetEntrySet";
 
-		_methodParameterTypes21 = new String[] { "long" };
-
-		_methodName22 = "getNewAssetEntrySets";
-
-		_methodParameterTypes22 = new String[] {
-				"long", "long", "boolean", "long", "long",
-				"com.liferay.portal.kernel.json.JSONArray",
-				"com.liferay.portal.kernel.json.JSONArray", "long[][]",
-				"long[][]", "java.lang.String[][]", "int", "int"
+		_methodParameterTypes21 = new String[] {
+				"long", "long", "java.lang.String"
 			};
 
-		_methodName23 = "getNewAssetEntrySets";
+		_methodName22 = "getAssetEntrySets";
 
-		_methodParameterTypes23 = new String[] {
-				"long", "long", "long", "long", "int",
-				"com.liferay.portal.kernel.json.JSONArray",
-				"java.lang.String[][]", "int", "int"
-			};
+		_methodParameterTypes22 = new String[] { "long", "long" };
 
-		_methodName24 = "getNewChildAssetEntrySets";
+		_methodName23 = "getAssetEntrySetsCount";
 
-		_methodParameterTypes24 = new String[] {
-				"long", "long", "long", "int", "int",
-				"com.liferay.portal.kernel.util.OrderByComparator"
-			};
+		_methodParameterTypes23 = new String[] { "long", "long", "int" };
 
-		_methodName25 = "getOldAssetEntrySets";
+		_methodName24 = "getChildAssetEntrySets";
 
-		_methodParameterTypes25 = new String[] {
-				"long", "long", "boolean", "long", "long",
-				"com.liferay.portal.kernel.json.JSONArray",
-				"com.liferay.portal.kernel.json.JSONArray", "long[][]",
-				"long[][]", "java.lang.String[][]", "int", "int"
-			};
+		_methodParameterTypes24 = new String[] { "long" };
 
-		_methodName26 = "getOldAssetEntrySets";
+		_methodName25 = "getChildAssetEntrySetsCount";
+
+		_methodParameterTypes25 = new String[] { "long" };
+
+		_methodName26 = "getNewChildAssetEntrySets";
 
 		_methodParameterTypes26 = new String[] {
-				"long", "long", "long", "long", "int",
-				"com.liferay.portal.kernel.json.JSONArray",
-				"java.lang.String[][]", "int", "int"
+				"long", "long", "int", "int",
+				"com.liferay.portal.kernel.util.OrderByComparator"
 			};
 
 		_methodName27 = "getOldChildAssetEntrySets";
 
 		_methodParameterTypes27 = new String[] {
-				"long", "long", "long", "int", "int",
+				"long", "long", "int", "int",
 				"com.liferay.portal.kernel.util.OrderByComparator"
 			};
 
@@ -195,7 +179,7 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 
 		_methodParameterTypes31 = new String[] {
 				"long", "com.liferay.portal.kernel.json.JSONObject", "boolean",
-				"long", "int"
+				"long", "java.lang.String", "int", "int"
 			};
 	}
 
@@ -756,10 +740,11 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 
 	@Override
 	public com.liferay.asset.entry.set.model.AssetEntrySet addAssetEntrySet(
-		long userId, long parentAssetEntrySetId, long creatorClassNameId,
-		long creatorClassPK,
+		long userId, long parentAssetEntrySetId, long classNameId,
+		long classPK, long creatorClassNameId, long creatorClassPK,
 		com.liferay.portal.kernel.json.JSONObject payloadJSONObject,
-		boolean privateAssetEntrySet, long stickyTime, int type)
+		boolean privateAssetEntrySet, long stickyTime, java.lang.String title,
+		int type, int status)
 		throws com.liferay.portal.kernel.exception.PortalException,
 			com.liferay.portal.kernel.exception.SystemException {
 		Object returnObj = null;
@@ -772,6 +757,10 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 						
 					parentAssetEntrySetId,
 						
+					classNameId,
+						
+					classPK,
+						
 					creatorClassNameId,
 						
 					creatorClassPK,
@@ -782,7 +771,11 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 						
 					stickyTime,
 						
-					type
+					ClpSerializer.translateInput(title),
+						
+					type,
+						
+					status
 					});
 		}
 		catch (Throwable t) {
@@ -844,14 +837,109 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 	}
 
 	@Override
-	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getChildAssetEntrySets(
-		long parentAssetEntrySetId)
+	public com.liferay.asset.entry.set.model.AssetEntrySet fetchAssetEntrySet(
+		long classNameId, long classPK, java.lang.String title)
 		throws com.liferay.portal.kernel.exception.SystemException {
 		Object returnObj = null;
 
 		try {
 			returnObj = _invokableLocalService.invokeMethod(_methodName21,
 					_methodParameterTypes21,
+					new Object[] {
+						classNameId,
+						
+					classPK,
+						
+					ClpSerializer.translateInput(title)
+					});
+		}
+		catch (Throwable t) {
+			t = ClpSerializer.translateThrowable(t);
+
+			if (t instanceof com.liferay.portal.kernel.exception.SystemException) {
+				throw (com.liferay.portal.kernel.exception.SystemException)t;
+			}
+
+			if (t instanceof RuntimeException) {
+				throw (RuntimeException)t;
+			}
+			else {
+				throw new RuntimeException(t.getClass().getName() +
+					" is not a valid exception");
+			}
+		}
+
+		return (com.liferay.asset.entry.set.model.AssetEntrySet)ClpSerializer.translateOutput(returnObj);
+	}
+
+	@Override
+	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getAssetEntrySets(
+		long classNameId, long classPK)
+		throws com.liferay.portal.kernel.exception.SystemException {
+		Object returnObj = null;
+
+		try {
+			returnObj = _invokableLocalService.invokeMethod(_methodName22,
+					_methodParameterTypes22,
+					new Object[] { classNameId, classPK });
+		}
+		catch (Throwable t) {
+			t = ClpSerializer.translateThrowable(t);
+
+			if (t instanceof com.liferay.portal.kernel.exception.SystemException) {
+				throw (com.liferay.portal.kernel.exception.SystemException)t;
+			}
+
+			if (t instanceof RuntimeException) {
+				throw (RuntimeException)t;
+			}
+			else {
+				throw new RuntimeException(t.getClass().getName() +
+					" is not a valid exception");
+			}
+		}
+
+		return (java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet>)ClpSerializer.translateOutput(returnObj);
+	}
+
+	@Override
+	public long getAssetEntrySetsCount(long classNameId, long classPK, int type)
+		throws com.liferay.portal.kernel.exception.SystemException {
+		Object returnObj = null;
+
+		try {
+			returnObj = _invokableLocalService.invokeMethod(_methodName23,
+					_methodParameterTypes23,
+					new Object[] { classNameId, classPK, type });
+		}
+		catch (Throwable t) {
+			t = ClpSerializer.translateThrowable(t);
+
+			if (t instanceof com.liferay.portal.kernel.exception.SystemException) {
+				throw (com.liferay.portal.kernel.exception.SystemException)t;
+			}
+
+			if (t instanceof RuntimeException) {
+				throw (RuntimeException)t;
+			}
+			else {
+				throw new RuntimeException(t.getClass().getName() +
+					" is not a valid exception");
+			}
+		}
+
+		return ((Long)returnObj).longValue();
+	}
+
+	@Override
+	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getChildAssetEntrySets(
+		long parentAssetEntrySetId)
+		throws com.liferay.portal.kernel.exception.SystemException {
+		Object returnObj = null;
+
+		try {
+			returnObj = _invokableLocalService.invokeMethod(_methodName24,
+					_methodParameterTypes24,
 					new Object[] { parentAssetEntrySetId });
 		}
 		catch (Throwable t) {
@@ -874,52 +962,17 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 	}
 
 	@Override
-	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getNewAssetEntrySets(
-		long userId, long time, boolean modifiedTime,
-		long parentAssetEntrySetId, long stickyTime,
-		com.liferay.portal.kernel.json.JSONArray creatorJSONArray,
-		com.liferay.portal.kernel.json.JSONArray sharedToJSONArray,
-		long[] includeAssetEntrySetIds, long[] excludeAssetEntrySetIds,
-		java.lang.String[] assetTagNames, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
+	public long getChildAssetEntrySetsCount(long parentAssetEntrySetId)
+		throws com.liferay.portal.kernel.exception.SystemException {
 		Object returnObj = null;
 
 		try {
-			returnObj = _invokableLocalService.invokeMethod(_methodName22,
-					_methodParameterTypes22,
-					new Object[] {
-						userId,
-						
-					time,
-						
-					modifiedTime,
-						
-					parentAssetEntrySetId,
-						
-					stickyTime,
-						
-					ClpSerializer.translateInput(creatorJSONArray),
-						
-					ClpSerializer.translateInput(sharedToJSONArray),
-						
-					ClpSerializer.translateInput(includeAssetEntrySetIds),
-						
-					ClpSerializer.translateInput(excludeAssetEntrySetIds),
-						
-					ClpSerializer.translateInput(assetTagNames),
-						
-					start,
-						
-					end
-					});
+			returnObj = _invokableLocalService.invokeMethod(_methodName25,
+					_methodParameterTypes25,
+					new Object[] { parentAssetEntrySetId });
 		}
 		catch (Throwable t) {
 			t = ClpSerializer.translateThrowable(t);
-
-			if (t instanceof com.liferay.portal.kernel.exception.PortalException) {
-				throw (com.liferay.portal.kernel.exception.PortalException)t;
-			}
 
 			if (t instanceof com.liferay.portal.kernel.exception.SystemException) {
 				throw (com.liferay.portal.kernel.exception.SystemException)t;
@@ -934,81 +987,22 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 			}
 		}
 
-		return (java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet>)ClpSerializer.translateOutput(returnObj);
-	}
-
-	@Override
-	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getNewAssetEntrySets(
-		long userId, long createTime, long parentAssetEntrySetId,
-		long stickyTime, int type,
-		com.liferay.portal.kernel.json.JSONArray sharedToJSONArray,
-		java.lang.String[] assetTagNames, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		Object returnObj = null;
-
-		try {
-			returnObj = _invokableLocalService.invokeMethod(_methodName23,
-					_methodParameterTypes23,
-					new Object[] {
-						userId,
-						
-					createTime,
-						
-					parentAssetEntrySetId,
-						
-					stickyTime,
-						
-					type,
-						
-					ClpSerializer.translateInput(sharedToJSONArray),
-						
-					ClpSerializer.translateInput(assetTagNames),
-						
-					start,
-						
-					end
-					});
-		}
-		catch (Throwable t) {
-			t = ClpSerializer.translateThrowable(t);
-
-			if (t instanceof com.liferay.portal.kernel.exception.PortalException) {
-				throw (com.liferay.portal.kernel.exception.PortalException)t;
-			}
-
-			if (t instanceof com.liferay.portal.kernel.exception.SystemException) {
-				throw (com.liferay.portal.kernel.exception.SystemException)t;
-			}
-
-			if (t instanceof RuntimeException) {
-				throw (RuntimeException)t;
-			}
-			else {
-				throw new RuntimeException(t.getClass().getName() +
-					" is not a valid exception");
-			}
-		}
-
-		return (java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet>)ClpSerializer.translateOutput(returnObj);
+		return ((Long)returnObj).longValue();
 	}
 
 	@Override
 	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getNewChildAssetEntrySets(
-		long userId, long createTime, long parentAssetEntrySetId, int start,
-		int end,
+		long createTime, long parentAssetEntrySetId, int start, int end,
 		com.liferay.portal.kernel.util.OrderByComparator orderByComparator)
 		throws com.liferay.portal.kernel.exception.PortalException,
 			com.liferay.portal.kernel.exception.SystemException {
 		Object returnObj = null;
 
 		try {
-			returnObj = _invokableLocalService.invokeMethod(_methodName24,
-					_methodParameterTypes24,
+			returnObj = _invokableLocalService.invokeMethod(_methodName26,
+					_methodParameterTypes26,
 					new Object[] {
-						userId,
-						
-					createTime,
+						createTime,
 						
 					parentAssetEntrySetId,
 						
@@ -1043,129 +1037,8 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 	}
 
 	@Override
-	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getOldAssetEntrySets(
-		long userId, long time, boolean modifiedTime,
-		long parentAssetEntrySetId, long stickyTime,
-		com.liferay.portal.kernel.json.JSONArray creatorJSONArray,
-		com.liferay.portal.kernel.json.JSONArray sharedToJSONArray,
-		long[] includeAssetEntrySetIds, long[] excludeAssetEntrySetIds,
-		java.lang.String[] assetTagNames, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		Object returnObj = null;
-
-		try {
-			returnObj = _invokableLocalService.invokeMethod(_methodName25,
-					_methodParameterTypes25,
-					new Object[] {
-						userId,
-						
-					time,
-						
-					modifiedTime,
-						
-					parentAssetEntrySetId,
-						
-					stickyTime,
-						
-					ClpSerializer.translateInput(creatorJSONArray),
-						
-					ClpSerializer.translateInput(sharedToJSONArray),
-						
-					ClpSerializer.translateInput(includeAssetEntrySetIds),
-						
-					ClpSerializer.translateInput(excludeAssetEntrySetIds),
-						
-					ClpSerializer.translateInput(assetTagNames),
-						
-					start,
-						
-					end
-					});
-		}
-		catch (Throwable t) {
-			t = ClpSerializer.translateThrowable(t);
-
-			if (t instanceof com.liferay.portal.kernel.exception.PortalException) {
-				throw (com.liferay.portal.kernel.exception.PortalException)t;
-			}
-
-			if (t instanceof com.liferay.portal.kernel.exception.SystemException) {
-				throw (com.liferay.portal.kernel.exception.SystemException)t;
-			}
-
-			if (t instanceof RuntimeException) {
-				throw (RuntimeException)t;
-			}
-			else {
-				throw new RuntimeException(t.getClass().getName() +
-					" is not a valid exception");
-			}
-		}
-
-		return (java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet>)ClpSerializer.translateOutput(returnObj);
-	}
-
-	@Override
-	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getOldAssetEntrySets(
-		long userId, long createTime, long parentAssetEntrySetId,
-		long stickyTime, int type,
-		com.liferay.portal.kernel.json.JSONArray sharedToJSONArray,
-		java.lang.String[] assetTagNames, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		Object returnObj = null;
-
-		try {
-			returnObj = _invokableLocalService.invokeMethod(_methodName26,
-					_methodParameterTypes26,
-					new Object[] {
-						userId,
-						
-					createTime,
-						
-					parentAssetEntrySetId,
-						
-					stickyTime,
-						
-					type,
-						
-					ClpSerializer.translateInput(sharedToJSONArray),
-						
-					ClpSerializer.translateInput(assetTagNames),
-						
-					start,
-						
-					end
-					});
-		}
-		catch (Throwable t) {
-			t = ClpSerializer.translateThrowable(t);
-
-			if (t instanceof com.liferay.portal.kernel.exception.PortalException) {
-				throw (com.liferay.portal.kernel.exception.PortalException)t;
-			}
-
-			if (t instanceof com.liferay.portal.kernel.exception.SystemException) {
-				throw (com.liferay.portal.kernel.exception.SystemException)t;
-			}
-
-			if (t instanceof RuntimeException) {
-				throw (RuntimeException)t;
-			}
-			else {
-				throw new RuntimeException(t.getClass().getName() +
-					" is not a valid exception");
-			}
-		}
-
-		return (java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet>)ClpSerializer.translateOutput(returnObj);
-	}
-
-	@Override
 	public java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getOldChildAssetEntrySets(
-		long userId, long createTime, long parentAssetEntrySetId, int start,
-		int end,
+		long createTime, long parentAssetEntrySetId, int start, int end,
 		com.liferay.portal.kernel.util.OrderByComparator orderByComparator)
 		throws com.liferay.portal.kernel.exception.PortalException,
 			com.liferay.portal.kernel.exception.SystemException {
@@ -1175,9 +1048,7 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 			returnObj = _invokableLocalService.invokeMethod(_methodName27,
 					_methodParameterTypes27,
 					new Object[] {
-						userId,
-						
-					createTime,
+						createTime,
 						
 					parentAssetEntrySetId,
 						
@@ -1320,7 +1191,8 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 	public com.liferay.asset.entry.set.model.AssetEntrySet updateAssetEntrySet(
 		long assetEntrySetId,
 		com.liferay.portal.kernel.json.JSONObject payloadJSONObject,
-		boolean privateAssetEntrySet, long stickyTime, int type)
+		boolean privateAssetEntrySet, long stickyTime, java.lang.String title,
+		int type, int status)
 		throws com.liferay.portal.kernel.exception.PortalException,
 			com.liferay.portal.kernel.exception.SystemException {
 		Object returnObj = null;
@@ -1337,7 +1209,11 @@ public class AssetEntrySetLocalServiceClp implements AssetEntrySetLocalService {
 						
 					stickyTime,
 						
-					type
+					ClpSerializer.translateInput(title),
+						
+					type,
+						
+					status
 					});
 		}
 		catch (Throwable t) {

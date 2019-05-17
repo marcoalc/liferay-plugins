@@ -18,7 +18,10 @@ import com.liferay.knowledgebase.model.KBArticle;
 import com.liferay.knowledgebase.model.KBFolder;
 import com.liferay.knowledgebase.model.KBFolderConstants;
 import com.liferay.knowledgebase.service.KBArticleLocalServiceUtil;
+import com.liferay.knowledgebase.service.KBArticleServiceUtil;
 import com.liferay.knowledgebase.service.KBFolderServiceUtil;
+import com.liferay.knowledgebase.util.comparator.KBArticlePriorityComparator;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -72,6 +75,39 @@ public class KBNavigationDisplayContext {
 		return ancestorResourcePrimaryKeys;
 	}
 
+	public List<KBArticle> getChildKBArticles(
+			long groupId, long parentResourcePrimKey, int level)
+		throws PortalException, SystemException {
+
+		if ((parentResourcePrimKey == getResourcePrimKey()) && (level == 0) &&
+			!isFolderResource()) {
+
+			KBArticle kbArticle = KBArticleServiceUtil.getLatestKBArticle(
+				getResourcePrimKey(), WorkflowConstants.STATUS_APPROVED);
+
+			return Collections.singletonList(kbArticle);
+		}
+
+		boolean maxNestingLevelReached = isMaxNestingLevelReached(level);
+
+		List<KBArticle> childKBArticles;
+
+		if (maxNestingLevelReached) {
+			childKBArticles = KBArticleServiceUtil.getAllDescendantKBArticles(
+				groupId, parentResourcePrimKey,
+				WorkflowConstants.STATUS_APPROVED,
+				new KBArticlePriorityComparator(true));
+		}
+		else {
+			childKBArticles = KBArticleServiceUtil.getKBArticles(
+				groupId, parentResourcePrimKey,
+				WorkflowConstants.STATUS_APPROVED, QueryUtil.ALL_POS,
+				QueryUtil.ALL_POS, new KBArticlePriorityComparator(true));
+		}
+
+		return childKBArticles;
+	}
+
 	public String getCurrentKBFolderURLTitle()
 		throws PortalException, SystemException {
 
@@ -96,7 +132,10 @@ public class KBNavigationDisplayContext {
 
 		String pageTitle = null;
 
-		if (rootResourcePrimKey != KBFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
+		if (isFolderResource() &&
+			(rootResourcePrimKey !=
+					KBFolderConstants.DEFAULT_PARENT_FOLDER_ID)) {
+
 			KBFolder kbFolder = KBFolderServiceUtil.getKBFolder(
 				rootResourcePrimKey);
 
@@ -115,21 +154,29 @@ public class KBNavigationDisplayContext {
 		return pageTitle;
 	}
 
+	public long getParentResourcePrimKey()
+		throws PortalException, SystemException {
+
+		if (_kbArticle != null) {
+			return _kbArticle.getParentResourcePrimKey();
+		}
+
+		return getRootResourcePrimKey();
+	}
+
 	public long getRootResourcePrimKey()
 		throws PortalException, SystemException {
 
 		if (_rootResourcePrimKey == null) {
-			_rootResourcePrimKey = KBFolderConstants.DEFAULT_PARENT_FOLDER_ID;
-
-			if (_kbArticle != null) {
+			if (!isFolderResource()) {
+				_rootResourcePrimKey = getResourcePrimKey();
+			}
+			else if (_kbArticle != null) {
 				_rootResourcePrimKey = KnowledgeBaseUtil.getKBFolderId(
 					_kbArticle.getParentResourceClassNameId(),
 					_kbArticle.getParentResourcePrimKey());
 			}
-
-			if (_rootResourcePrimKey ==
-					KBFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
-
+			else {
 				_rootResourcePrimKey = KnowledgeBaseUtil.getRootResourcePrimKey(
 					_portletRequest,
 					PortalUtil.getScopeGroupId(_portletRequest),
@@ -138,6 +185,51 @@ public class KBNavigationDisplayContext {
 		}
 
 		return _rootResourcePrimKey;
+	}
+
+	public boolean isChildKBArticleExpanded(KBArticle childKBArticle, int level)
+		throws PortalException, SystemException {
+
+		List<Long> ancestorResourcePrimaryKeys =
+			getAncestorResourcePrimaryKeys();
+
+		if ((ancestorResourcePrimaryKeys.size() > 1) &&
+			(level < ancestorResourcePrimaryKeys.size()) &&
+			(childKBArticle.getResourcePrimKey() ==
+				ancestorResourcePrimaryKeys.get(level))) {
+
+			return true;
+		}
+
+		return false;
+	}
+
+	public boolean isFolderResource() {
+		long kbFolderClassNameId = PortalUtil.getClassNameId(
+			KBFolderConstants.getClassName());
+
+		if (kbFolderClassNameId == getResourceClassNameId()) {
+			return true;
+		}
+
+		return false;
+	}
+
+	public boolean isFurtherExpansionRequired(
+			long parentResourcePrimKey, KBArticle childKBArticle, int level)
+		throws PortalException, SystemException {
+
+		List<Long> ancestorResourcePrimaryKeys =
+				getAncestorResourcePrimaryKeys();
+
+			if (!isMaxNestingLevelReached(level) &&
+				ancestorResourcePrimaryKeys.contains(
+					childKBArticle.getResourcePrimKey())) {
+
+				return true;
+			}
+
+			return false;
 	}
 
 	public boolean isLeftNavigationVisible()
@@ -150,15 +242,23 @@ public class KBNavigationDisplayContext {
 		return _leftNavigationVisible;
 	}
 
+	public boolean isMaxNestingLevelReached(int level) {
+		int maxNestingLevel = GetterUtil.getInteger(
+			_portletPreferences.getValue("maxNestingLevel", null), 3);
+
+		boolean maxNestingLevelReached = false;
+
+		if ((maxNestingLevel - level) <= 1) {
+			maxNestingLevelReached = true;
+		}
+
+		return maxNestingLevelReached;
+	}
+
 	public boolean isTopNavigationVisible()
 		throws PortalException, SystemException {
 
-		long kbFolderClassNameId = PortalUtil.getClassNameId(
-			KBFolderConstants.getClassName());
-
-		if ((getResourceClassNameId() == kbFolderClassNameId) &&
-			!isLeftNavigationVisible()) {
-
+		if (isFolderResource() && !isLeftNavigationVisible()) {
 			return true;
 		}
 
@@ -194,10 +294,7 @@ public class KBNavigationDisplayContext {
 
 		long scopeGroupId = PortalUtil.getScopeGroupId(_portletRequest);
 
-		long kbFolderClassNameId = PortalUtil.getClassNameId(
-			KBFolderConstants.getClassName());
-
-		if (getResourceClassNameId() == kbFolderClassNameId) {
+		if (isFolderResource()) {
 			List<KBFolder> kbFolders =
 				KnowledgeBaseUtil.getAlternateRootKBFolders(
 					scopeGroupId, getResourcePrimKey());
@@ -224,36 +321,44 @@ public class KBNavigationDisplayContext {
 			}
 		}
 
-		boolean showNavigation = true;
-
 		long rootResourcePrimKey = getRootResourcePrimKey();
 
 		int kbArticlesCount = KBArticleLocalServiceUtil.getKBArticlesCount(
 			scopeGroupId, rootResourcePrimKey,
 			WorkflowConstants.STATUS_APPROVED);
 
+		if (!isFolderResource()) {
+			kbArticlesCount++;
+		}
+
 		if (kbArticlesCount == 0) {
-			showNavigation = false;
-		}
-		else if (kbArticlesCount == 1) {
-			List<KBArticle> kbArticles =
-				KBArticleLocalServiceUtil.getKBArticles(
-					scopeGroupId, rootResourcePrimKey,
-					WorkflowConstants.STATUS_APPROVED, 0, 1, null);
-
-			KBArticle navigationKBArticle = kbArticles.get(0);
-
-			int navigationKBArticleChildCount =
-				KBArticleLocalServiceUtil.getKBArticlesCount(
-					scopeGroupId, navigationKBArticle.getResourcePrimKey(),
-					WorkflowConstants.STATUS_APPROVED);
-
-			if (navigationKBArticleChildCount == 0) {
-				showNavigation = false;
-			}
+			return false;
 		}
 
-		return showNavigation;
+		if (kbArticlesCount != 1) {
+			return true;
+		}
+
+		List<KBArticle> kbArticles = KBArticleLocalServiceUtil.getKBArticles(
+			scopeGroupId, rootResourcePrimKey,
+			WorkflowConstants.STATUS_APPROVED, 0, 1, null);
+
+		if (kbArticles.isEmpty()) {
+			return false;
+		}
+
+		KBArticle navigationKBArticle = kbArticles.get(0);
+
+		int navigationKBArticleChildCount =
+			KBArticleLocalServiceUtil.getKBArticlesCount(
+				scopeGroupId, navigationKBArticle.getResourcePrimKey(),
+				WorkflowConstants.STATUS_APPROVED);
+
+		if (navigationKBArticleChildCount == 0) {
+			return false;
+		}
+
+		return true;
 	}
 
 	private final KBArticle _kbArticle;

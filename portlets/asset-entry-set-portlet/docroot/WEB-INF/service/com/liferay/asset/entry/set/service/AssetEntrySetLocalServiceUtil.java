@@ -278,16 +278,18 @@ public class AssetEntrySetLocalServiceUtil {
 	}
 
 	public static com.liferay.asset.entry.set.model.AssetEntrySet addAssetEntrySet(
-		long userId, long parentAssetEntrySetId, long creatorClassNameId,
-		long creatorClassPK,
+		long userId, long parentAssetEntrySetId, long classNameId,
+		long classPK, long creatorClassNameId, long creatorClassPK,
 		com.liferay.portal.kernel.json.JSONObject payloadJSONObject,
-		boolean privateAssetEntrySet, long stickyTime, int type)
+		boolean privateAssetEntrySet, long stickyTime, java.lang.String title,
+		int type, int status)
 		throws com.liferay.portal.kernel.exception.PortalException,
 			com.liferay.portal.kernel.exception.SystemException {
 		return getService()
 				   .addAssetEntrySet(userId, parentAssetEntrySetId,
-			creatorClassNameId, creatorClassPK, payloadJSONObject,
-			privateAssetEntrySet, stickyTime, type);
+			classNameId, classPK, creatorClassNameId, creatorClassPK,
+			payloadJSONObject, privateAssetEntrySet, stickyTime, title, type,
+			status);
 	}
 
 	public static com.liferay.portal.kernel.json.JSONObject addFileAttachment(
@@ -297,89 +299,51 @@ public class AssetEntrySetLocalServiceUtil {
 		return getService().addFileAttachment(userId, file);
 	}
 
+	public static com.liferay.asset.entry.set.model.AssetEntrySet fetchAssetEntrySet(
+		long classNameId, long classPK, java.lang.String title)
+		throws com.liferay.portal.kernel.exception.SystemException {
+		return getService().fetchAssetEntrySet(classNameId, classPK, title);
+	}
+
+	public static java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getAssetEntrySets(
+		long classNameId, long classPK)
+		throws com.liferay.portal.kernel.exception.SystemException {
+		return getService().getAssetEntrySets(classNameId, classPK);
+	}
+
+	public static long getAssetEntrySetsCount(long classNameId, long classPK,
+		int type) throws com.liferay.portal.kernel.exception.SystemException {
+		return getService().getAssetEntrySetsCount(classNameId, classPK, type);
+	}
+
 	public static java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getChildAssetEntrySets(
 		long parentAssetEntrySetId)
 		throws com.liferay.portal.kernel.exception.SystemException {
 		return getService().getChildAssetEntrySets(parentAssetEntrySetId);
 	}
 
-	public static java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getNewAssetEntrySets(
-		long userId, long time, boolean modifiedTime,
-		long parentAssetEntrySetId, long stickyTime,
-		com.liferay.portal.kernel.json.JSONArray creatorJSONArray,
-		com.liferay.portal.kernel.json.JSONArray sharedToJSONArray,
-		long[] includeAssetEntrySetIds, long[] excludeAssetEntrySetIds,
-		java.lang.String[] assetTagNames, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService()
-				   .getNewAssetEntrySets(userId, time, modifiedTime,
-			parentAssetEntrySetId, stickyTime, creatorJSONArray,
-			sharedToJSONArray, includeAssetEntrySetIds,
-			excludeAssetEntrySetIds, assetTagNames, start, end);
-	}
-
-	public static java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getNewAssetEntrySets(
-		long userId, long createTime, long parentAssetEntrySetId,
-		long stickyTime, int type,
-		com.liferay.portal.kernel.json.JSONArray sharedToJSONArray,
-		java.lang.String[] assetTagNames, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService()
-				   .getNewAssetEntrySets(userId, createTime,
-			parentAssetEntrySetId, stickyTime, type, sharedToJSONArray,
-			assetTagNames, start, end);
+	public static long getChildAssetEntrySetsCount(long parentAssetEntrySetId)
+		throws com.liferay.portal.kernel.exception.SystemException {
+		return getService().getChildAssetEntrySetsCount(parentAssetEntrySetId);
 	}
 
 	public static java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getNewChildAssetEntrySets(
-		long userId, long createTime, long parentAssetEntrySetId, int start,
-		int end,
+		long createTime, long parentAssetEntrySetId, int start, int end,
 		com.liferay.portal.kernel.util.OrderByComparator orderByComparator)
 		throws com.liferay.portal.kernel.exception.PortalException,
 			com.liferay.portal.kernel.exception.SystemException {
 		return getService()
-				   .getNewChildAssetEntrySets(userId, createTime,
+				   .getNewChildAssetEntrySets(createTime,
 			parentAssetEntrySetId, start, end, orderByComparator);
 	}
 
-	public static java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getOldAssetEntrySets(
-		long userId, long time, boolean modifiedTime,
-		long parentAssetEntrySetId, long stickyTime,
-		com.liferay.portal.kernel.json.JSONArray creatorJSONArray,
-		com.liferay.portal.kernel.json.JSONArray sharedToJSONArray,
-		long[] includeAssetEntrySetIds, long[] excludeAssetEntrySetIds,
-		java.lang.String[] assetTagNames, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService()
-				   .getOldAssetEntrySets(userId, time, modifiedTime,
-			parentAssetEntrySetId, stickyTime, creatorJSONArray,
-			sharedToJSONArray, includeAssetEntrySetIds,
-			excludeAssetEntrySetIds, assetTagNames, start, end);
-	}
-
-	public static java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getOldAssetEntrySets(
-		long userId, long createTime, long parentAssetEntrySetId,
-		long stickyTime, int type,
-		com.liferay.portal.kernel.json.JSONArray sharedToJSONArray,
-		java.lang.String[] assetTagNames, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService()
-				   .getOldAssetEntrySets(userId, createTime,
-			parentAssetEntrySetId, stickyTime, type, sharedToJSONArray,
-			assetTagNames, start, end);
-	}
-
 	public static java.util.List<com.liferay.asset.entry.set.model.AssetEntrySet> getOldChildAssetEntrySets(
-		long userId, long createTime, long parentAssetEntrySetId, int start,
-		int end,
+		long createTime, long parentAssetEntrySetId, int start, int end,
 		com.liferay.portal.kernel.util.OrderByComparator orderByComparator)
 		throws com.liferay.portal.kernel.exception.PortalException,
 			com.liferay.portal.kernel.exception.SystemException {
 		return getService()
-				   .getOldChildAssetEntrySets(userId, createTime,
+				   .getOldChildAssetEntrySets(createTime,
 			parentAssetEntrySetId, start, end, orderByComparator);
 	}
 
@@ -407,12 +371,13 @@ public class AssetEntrySetLocalServiceUtil {
 	public static com.liferay.asset.entry.set.model.AssetEntrySet updateAssetEntrySet(
 		long assetEntrySetId,
 		com.liferay.portal.kernel.json.JSONObject payloadJSONObject,
-		boolean privateAssetEntrySet, long stickyTime, int type)
+		boolean privateAssetEntrySet, long stickyTime, java.lang.String title,
+		int type, int status)
 		throws com.liferay.portal.kernel.exception.PortalException,
 			com.liferay.portal.kernel.exception.SystemException {
 		return getService()
 				   .updateAssetEntrySet(assetEntrySetId, payloadJSONObject,
-			privateAssetEntrySet, stickyTime, type);
+			privateAssetEntrySet, stickyTime, title, type, status);
 	}
 
 	public static void clearService() {

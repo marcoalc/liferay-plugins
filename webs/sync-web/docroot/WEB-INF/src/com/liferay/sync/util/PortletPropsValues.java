@@ -35,6 +35,10 @@ public class PortletPropsValues {
 		GetterUtil.getInteger(
 			PortletProps.get(PortletPropsKeys.SYNC_CLIENT_BATCH_FILE_MAX_SIZE));
 
+	public static final boolean SYNC_CLIENT_FORCE_SECURITY_MODE =
+		GetterUtil.getBoolean(
+			PortletProps.get(PortletPropsKeys.SYNC_CLIENT_FORCE_SECURITY_MODE));
+
 	public static final int SYNC_CLIENT_MAX_CONNECTIONS = GetterUtil.getInteger(
 		PortletProps.get(PortletPropsKeys.SYNC_CLIENT_MAX_CONNECTIONS));
 
@@ -64,6 +68,7 @@ public class PortletPropsValues {
 			PortletProps.get(
 				PortletPropsKeys.SYNC_FILE_CHECKSUM_THRESHOLD_SIZE));
 
+	@Deprecated
 	public static final int SYNC_FILE_DIFF_CACHE_DELETE_INTERVAL =
 		GetterUtil.getInteger(
 			PortletProps.get(
@@ -77,6 +82,9 @@ public class PortletPropsValues {
 		GetterUtil.getLong(
 			PortletProps.get(
 				PortletPropsKeys.SYNC_FILE_DIFF_CACHE_EXPIRATION_TIME));
+
+	public static final boolean SYNC_LAN_ENABLED = GetterUtil.getBoolean(
+		PortletProps.get(PortletPropsKeys.SYNC_LAN_ENABLED));
 
 	public static final String[] SYNC_MAC_PACKAGE_FOLDER_EXTENSIONS =
 		GetterUtil.getStringValues(

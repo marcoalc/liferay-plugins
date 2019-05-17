@@ -122,13 +122,21 @@ public class AssetEntrySetLikeLocalServiceClpInvoker {
 
 		_methodParameterTypes49 = new String[] { "java.lang.String" };
 
-		_methodName54 = "fetchAssetEntrySetLike";
+		_methodName54 = "deleteAssetEntrySetLikes";
 
-		_methodParameterTypes54 = new String[] { "long", "long", "long" };
+		_methodParameterTypes54 = new String[] { "long" };
 
-		_methodName55 = "getAssetEntrySetLikes";
+		_methodName55 = "fetchAssetEntrySetLike";
 
-		_methodParameterTypes55 = new String[] {
+		_methodParameterTypes55 = new String[] { "long", "long", "long" };
+
+		_methodName56 = "getAssetEntrySetLikeCount";
+
+		_methodParameterTypes56 = new String[] { "long" };
+
+		_methodName57 = "getAssetEntrySetLikes";
+
+		_methodParameterTypes57 = new String[] {
 				"long", "long", "long", "int", "int"
 			};
 	}
@@ -236,13 +244,25 @@ public class AssetEntrySetLikeLocalServiceClpInvoker {
 
 		if (_methodName54.equals(name) &&
 				Arrays.deepEquals(_methodParameterTypes54, parameterTypes)) {
+			AssetEntrySetLikeLocalServiceUtil.deleteAssetEntrySetLikes(((Long)arguments[0]).longValue());
+
+			return null;
+		}
+
+		if (_methodName55.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes55, parameterTypes)) {
 			return AssetEntrySetLikeLocalServiceUtil.fetchAssetEntrySetLike(((Long)arguments[0]).longValue(),
 				((Long)arguments[1]).longValue(),
 				((Long)arguments[2]).longValue());
 		}
 
-		if (_methodName55.equals(name) &&
-				Arrays.deepEquals(_methodParameterTypes55, parameterTypes)) {
+		if (_methodName56.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes56, parameterTypes)) {
+			return AssetEntrySetLikeLocalServiceUtil.getAssetEntrySetLikeCount(((Long)arguments[0]).longValue());
+		}
+
+		if (_methodName57.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes57, parameterTypes)) {
 			return AssetEntrySetLikeLocalServiceUtil.getAssetEntrySetLikes(((Long)arguments[0]).longValue(),
 				((Long)arguments[1]).longValue(),
 				((Long)arguments[2]).longValue(),
@@ -293,4 +313,8 @@ public class AssetEntrySetLikeLocalServiceClpInvoker {
 	private String[] _methodParameterTypes54;
 	private String _methodName55;
 	private String[] _methodParameterTypes55;
+	private String _methodName56;
+	private String[] _methodParameterTypes56;
+	private String _methodName57;
+	private String[] _methodParameterTypes57;
 }

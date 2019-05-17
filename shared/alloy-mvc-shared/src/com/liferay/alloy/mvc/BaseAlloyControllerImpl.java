@@ -63,6 +63,7 @@ import com.liferay.portal.kernel.util.ServiceBeanMethodInvocationFactoryUtil;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.TextFormatter;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.model.AttachedModel;
@@ -71,6 +72,7 @@ import com.liferay.portal.model.BaseModel;
 import com.liferay.portal.model.Company;
 import com.liferay.portal.model.GroupedModel;
 import com.liferay.portal.model.Layout;
+import com.liferay.portal.model.ModelHintsUtil;
 import com.liferay.portal.model.PersistedModel;
 import com.liferay.portal.model.Portlet;
 import com.liferay.portal.model.User;
@@ -180,6 +182,34 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 			baseModel, CompanyLocalServiceUtil.getCompany(companyId), user);
 	}
 
+	public static void setLocalizedProperties(
+			BaseModel<?> baseModel, HttpServletRequest request, Locale locale)
+		throws Exception {
+
+		Map<String, Object> modelAttributes = baseModel.getModelAttributes();
+
+		for (String propertyName : modelAttributes.keySet()) {
+			boolean localized = ModelHintsUtil.isLocalized(
+				baseModel.getModelClassName(), propertyName);
+
+			if (!localized) {
+				continue;
+			}
+
+			Class<?> baseModelClass = baseModel.getModelClass();
+
+			String setMethodName =
+				"set" + TextFormatter.format(propertyName, TextFormatter.G);
+
+			Method setMethod = baseModelClass.getMethod(
+				setMethodName, new Class<?>[] {String.class, Locale.class});
+
+			String value = ParamUtil.getString(request, propertyName);
+
+			setMethod.invoke(baseModel, value, locale);
+		}
+	}
+
 	@Override
 	public void afterPropertiesSet() {
 		initClass();
@@ -222,7 +252,7 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 		}
 
 		if ((alloyNotificationEventHelper != null) &&
-			!viewPath.equals(_VIEW_PATH_ERROR)) {
+			!viewPath.equals(VIEW_PATH_ERROR)) {
 
 			alloyNotificationEventHelper.addUserNotificationEvents(
 				request, controllerPath, actionPath,
@@ -339,6 +369,8 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 
 		BeanPropertiesUtil.setProperties(baseModel, request);
 
+		setLocalizedProperties(baseModel);
+
 		updateModelIgnoreRequest(baseModel, properties);
 	}
 
@@ -393,7 +425,7 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 		sb.append(portlet.getFriendlyURLMapping());
 		sb.append("/views/");
 
-		if (viewPath.equals(_VIEW_PATH_ERROR)) {
+		if (viewPath.equals(VIEW_PATH_ERROR)) {
 			sb.append("error.jsp");
 
 			return sb.toString();
@@ -505,6 +537,7 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 			}
 		}
 		catch (Exception e) {
+			Object[] arguments = null;
 			String message = "an-unexpected-system-error-occurred";
 
 			Throwable rootCause = getRootCause(e);
@@ -516,13 +549,18 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 					log.error(rootCause, rootCause);
 				}
 
+				if (ArrayUtil.isNotEmpty(ae.arguments)) {
+					arguments = ae.arguments;
+				}
+
 				message = rootCause.getMessage();
 			}
 			else {
 				log.error(e, e);
 			}
 
-			renderError(HttpServletResponse.SC_BAD_REQUEST, e, message);
+			renderError(
+				HttpServletResponse.SC_BAD_REQUEST, e, message, arguments);
 		}
 		finally {
 			if (isRespondingTo()) {
@@ -1091,7 +1129,7 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 		portletRequest.setAttribute("pattern", pattern);
 		portletRequest.setAttribute("status", status);
 
-		render(_VIEW_PATH_ERROR);
+		render(VIEW_PATH_ERROR);
 	}
 
 	protected void renderError(int status, String pattern, Object... arguments)
@@ -1365,6 +1403,18 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 		groupedModel.setGroupId(themeDisplay.getScopeGroupId());
 	}
 
+	protected void setLocalizedProperties(BaseModel<?> baseModel)
+		throws Exception {
+
+		setLocalizedProperties(baseModel, request, request.getLocale());
+	}
+
+	protected void setLocalizedProperties(BaseModel<?> baseModel, Locale locale)
+		throws Exception {
+
+		setLocalizedProperties(baseModel, request, locale);
+	}
+
 	protected void setOpenerSuccessMessage() {
 		SessionMessages.add(
 			portletRequest,
@@ -1500,6 +1550,8 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 	protected static final String CALLED_PROCESS_ACTION =
 		BaseAlloyControllerImpl.class.getName() + "#CALLED_PROCESS_ACTION";
 
+	protected static final String VIEW_PATH_ERROR = "VIEW_PATH_ERROR";
+
 	protected static Log log = LogFactoryUtil.getLog(
 		BaseAlloyControllerImpl.class);
 
@@ -1547,7 +1599,5 @@ public abstract class BaseAlloyControllerImpl implements AlloyController {
 	protected ThemeDisplay themeDisplay;
 	protected User user;
 	protected String viewPath;
-
-	private static final String _VIEW_PATH_ERROR = "VIEW_PATH_ERROR";
 
 }

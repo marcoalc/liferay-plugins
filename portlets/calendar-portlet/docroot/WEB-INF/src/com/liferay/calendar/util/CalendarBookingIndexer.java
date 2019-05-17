@@ -14,10 +14,12 @@
 
 package com.liferay.calendar.util;
 
+import com.liferay.calendar.model.Calendar;
 import com.liferay.calendar.model.CalendarBooking;
 import com.liferay.calendar.service.CalendarBookingLocalServiceUtil;
 import com.liferay.calendar.service.persistence.CalendarBookingActionableDynamicQuery;
 import com.liferay.calendar.workflow.CalendarBookingWorkflowConstants;
+import com.liferay.compat.portal.kernel.search.Field;
 import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.Property;
@@ -27,8 +29,8 @@ import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.search.BaseIndexer;
+import com.liferay.portal.kernel.search.BooleanQuery;
 import com.liferay.portal.kernel.search.Document;
-import com.liferay.portal.kernel.search.Field;
 import com.liferay.portal.kernel.search.SearchContext;
 import com.liferay.portal.kernel.search.SearchEngineUtil;
 import com.liferay.portal.kernel.search.Summary;
@@ -36,6 +38,7 @@ import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.LocalizationUtil;
 import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.util.PortalUtil;
 import com.liferay.portlet.trash.util.TrashUtil;
 
 import java.util.ArrayList;
@@ -56,9 +59,27 @@ public class CalendarBookingIndexer extends BaseIndexer {
 
 	public static final String PORTLET_ID = PortletKeys.CALENDAR;
 
+	public CalendarBookingIndexer() {
+		setPermissionAware(true);
+	}
+
 	@Override
 	public String[] getClassNames() {
 		return CLASS_NAMES;
+	}
+
+	@Override
+	public BooleanQuery getFacetQuery(
+			String className, SearchContext searchContext)
+		throws Exception {
+
+		BooleanQuery booleanQuery = super.getFacetQuery(
+			Calendar.class.getName(), searchContext);
+
+		booleanQuery.addExactTerm(
+			Field.ENTRY_CLASS_NAME, CalendarBooking.class.getName());
+
+		return booleanQuery;
 	}
 
 	@Override
@@ -80,6 +101,10 @@ public class CalendarBookingIndexer extends BaseIndexer {
 		CalendarBooking calendarBooking = (CalendarBooking)obj;
 
 		Document document = getBaseModelDocument(PORTLET_ID, calendarBooking);
+
+		document.addKeyword(
+			Field.CLASS_NAME_ID, PortalUtil.getClassNameId(Calendar.class));
+		document.addKeyword(Field.CLASS_PK, calendarBooking.getCalendarId());
 
 		Locale defaultLocale = LocaleUtil.getSiteDefault();
 
@@ -106,6 +131,8 @@ public class CalendarBookingIndexer extends BaseIndexer {
 				description);
 		}
 
+		document.addKeyword(Field.RELATED_ENTRY, true);
+
 		String titleDefaultLanguageId = LocalizationUtil.getDefaultLanguageId(
 			calendarBooking.getTitle());
 
@@ -124,6 +151,9 @@ public class CalendarBookingIndexer extends BaseIndexer {
 					titleLanguageId),
 				title);
 		}
+
+		document.addKeyword(
+			Field.VIEW_ACTION_ID, ActionKeys.VIEW_BOOKING_DETAILS);
 
 		String calendarBookingId = String.valueOf(
 			calendarBooking.getCalendarBookingId());

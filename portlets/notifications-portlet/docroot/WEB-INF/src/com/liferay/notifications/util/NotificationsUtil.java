@@ -20,6 +20,8 @@ import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.log.Log;
+import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.messaging.DestinationNames;
 import com.liferay.portal.kernel.messaging.MessageBusUtil;
 import com.liferay.portal.kernel.notifications.NotificationEvent;
@@ -32,9 +34,14 @@ import com.liferay.portal.kernel.util.ObjectValuePair;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.model.Subscription;
+import com.liferay.portal.model.User;
 import com.liferay.portal.model.UserNotificationDeliveryConstants;
+import com.liferay.portal.security.permission.PermissionChecker;
+import com.liferay.portal.security.permission.PermissionCheckerFactoryUtil;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.service.SubscriptionLocalServiceUtil;
+import com.liferay.portal.service.UserLocalServiceUtil;
+import com.liferay.portal.service.permission.SubscriptionPermissionUtil;
 import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portal.util.PortalUtil;
 import com.liferay.portlet.asset.model.AssetRenderer;
@@ -244,9 +251,10 @@ public class NotificationsUtil {
 			int notificationType = notificationEventJSONObject.getInt(
 				"notificationType");
 
-			long userId = notificationEventJSONObject.getLong("userId");
+			long notificationUserId = notificationEventJSONObject.getLong(
+				"userId");
 
-			Set<Long> subscriberUserIds = new HashSet<Long>();
+			Set<Long> notifiedUserIds = new HashSet<Long>();
 
 			for (ObjectValuePair<String, Long> ovp : subscribersOVPs) {
 				String className = ovp.getKey();
@@ -257,20 +265,22 @@ public class NotificationsUtil {
 						companyId, className, classPK);
 
 				for (Subscription subscription : subscriptions) {
-					long subscriberUserId = subscription.getUserId();
+					long subscriptionUserId = subscription.getUserId();
 
-					if (subscriberUserId == userId) {
+					if (!_isNotificable(
+							subscriptionUserId, notificationUserId,
+						subscription, notifiedUserIds,
+						notificationEventJSONObject.getString("className"),
+						notificationEventJSONObject.getLong("classPK")
+					)) {
+
 						continue;
 					}
 
-					if (subscriberUserIds.contains(subscriberUserId)) {
-						continue;
-					}
-
-					subscriberUserIds.add(subscriberUserId);
+					notifiedUserIds.add(subscriptionUserId);
 
 					if (UserNotificationManagerUtil.isDeliver(
-							subscriberUserId, portletKey, 0, notificationType,
+							subscriptionUserId, portletKey, 0, notificationType,
 							UserNotificationDeliveryConstants.TYPE_WEBSITE)) {
 
 						NotificationEvent notificationEvent =
@@ -282,13 +292,82 @@ public class NotificationsUtil {
 						com.liferay.portal.service.
 							UserNotificationEventLocalServiceUtil.
 								addUserNotificationEvent(
-									subscriberUserId, notificationEvent);
+									subscriptionUserId, notificationEvent);
 					}
 				}
 			}
 		}
 
+		private boolean _isNotificable(
+				long subscriberUserId, long notificationUserId,
+				Subscription subscription, Set<Long> notifiedUserIds,
+				String notificationEventJSONObjectClassName,
+				long notificationEventJSONObjectClassPK)
+			throws PortalException, SystemException {
+
+			if (subscriberUserId == notificationUserId) {
+				return false;
+			}
+
+			if (notifiedUserIds.contains(subscriberUserId)) {
+				return false;
+			}
+
+			User subscriberUser = UserLocalServiceUtil.fetchUserById(
+				subscriberUserId);
+
+			if (subscriberUser == null) {
+				if (_log.isInfoEnabled()) {
+					_log.info(
+						"Subscription " + subscription.getSubscriptionId() +
+							" is stale and will be deleted");
+				}
+
+				SubscriptionLocalServiceUtil.deleteSubscription(
+					subscription.getSubscriptionId());
+
+				return false;
+			}
+
+			if (!subscriberUser.isActive()) {
+				if (_log.isInfoEnabled()) {
+					_log.info(
+						"Skip inactive user " + subscriberUser.getUserId());
+				}
+
+				return false;
+			}
+
+			PermissionChecker permissionChecker = null;
+
+			try {
+				permissionChecker = PermissionCheckerFactoryUtil.create(
+					subscriberUser);
+			}
+			catch (Exception e) {
+				if (_log.isErrorEnabled()) {
+					_log.error(e);
+				}
+
+				return false;
+			}
+
+			if (!SubscriptionPermissionUtil.contains(
+					permissionChecker, subscription.getClassName(),
+					subscription.getClassPK(),
+					notificationEventJSONObjectClassName,
+					notificationEventJSONObjectClassPK)) {
+
+				return false;
+			}
+
+			return true;
+		}
+
 		private static final long serialVersionUID = 1L;
+
+		private static Log _log = LogFactoryUtil.getLog(
+			NotificationsUtil.class);
 
 		private long _companyId;
 		private JSONObject _notificationEventJSONObject;

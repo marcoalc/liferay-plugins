@@ -43,37 +43,52 @@ public class KBFolderServiceClpInvoker {
 
 		_methodParameterTypes51 = new String[] { "long" };
 
-		_methodName52 = "fetchKBFolderByUrlTitle";
+		_methodName52 = "fetchFirstChildKBFolder";
 
-		_methodParameterTypes52 = new String[] {
+		_methodParameterTypes52 = new String[] { "long", "long" };
+
+		_methodName53 = "fetchFirstChildKBFolder";
+
+		_methodParameterTypes53 = new String[] {
+				"long", "long",
+				"com.liferay.portal.kernel.util.OrderByComparator"
+			};
+
+		_methodName54 = "fetchKBFolder";
+
+		_methodParameterTypes54 = new String[] { "long" };
+
+		_methodName55 = "fetchKBFolderByUrlTitle";
+
+		_methodParameterTypes55 = new String[] {
 				"long", "long", "java.lang.String"
 			};
 
-		_methodName53 = "getKBFolder";
+		_methodName56 = "getKBFolder";
 
-		_methodParameterTypes53 = new String[] { "long" };
+		_methodParameterTypes56 = new String[] { "long" };
 
-		_methodName54 = "getKBFolderByUrlTitle";
+		_methodName57 = "getKBFolderByUrlTitle";
 
-		_methodParameterTypes54 = new String[] {
+		_methodParameterTypes57 = new String[] {
 				"long", "long", "java.lang.String"
 			};
 
-		_methodName55 = "getKBFolders";
+		_methodName58 = "getKBFolders";
 
-		_methodParameterTypes55 = new String[] { "long", "long", "int", "int" };
+		_methodParameterTypes58 = new String[] { "long", "long", "int", "int" };
 
-		_methodName56 = "getKBFoldersCount";
+		_methodName59 = "getKBFoldersCount";
 
-		_methodParameterTypes56 = new String[] { "long", "long" };
+		_methodParameterTypes59 = new String[] { "long", "long" };
 
-		_methodName57 = "moveKBFolder";
+		_methodName60 = "moveKBFolder";
 
-		_methodParameterTypes57 = new String[] { "long", "long" };
+		_methodParameterTypes60 = new String[] { "long", "long" };
 
-		_methodName58 = "updateKBFolder";
+		_methodName61 = "updateKBFolder";
 
-		_methodParameterTypes58 = new String[] {
+		_methodParameterTypes61 = new String[] {
 				"long", "long", "long", "java.lang.String", "java.lang.String"
 			};
 	}
@@ -108,45 +123,63 @@ public class KBFolderServiceClpInvoker {
 
 		if (_methodName52.equals(name) &&
 				Arrays.deepEquals(_methodParameterTypes52, parameterTypes)) {
-			return KBFolderServiceUtil.fetchKBFolderByUrlTitle(((Long)arguments[0]).longValue(),
-				((Long)arguments[1]).longValue(), (java.lang.String)arguments[2]);
+			return KBFolderServiceUtil.fetchFirstChildKBFolder(((Long)arguments[0]).longValue(),
+				((Long)arguments[1]).longValue());
 		}
 
 		if (_methodName53.equals(name) &&
 				Arrays.deepEquals(_methodParameterTypes53, parameterTypes)) {
-			return KBFolderServiceUtil.getKBFolder(((Long)arguments[0]).longValue());
+			return KBFolderServiceUtil.fetchFirstChildKBFolder(((Long)arguments[0]).longValue(),
+				((Long)arguments[1]).longValue(),
+				(com.liferay.portal.kernel.util.OrderByComparator)arguments[2]);
 		}
 
 		if (_methodName54.equals(name) &&
 				Arrays.deepEquals(_methodParameterTypes54, parameterTypes)) {
-			return KBFolderServiceUtil.getKBFolderByUrlTitle(((Long)arguments[0]).longValue(),
-				((Long)arguments[1]).longValue(), (java.lang.String)arguments[2]);
+			return KBFolderServiceUtil.fetchKBFolder(((Long)arguments[0]).longValue());
 		}
 
 		if (_methodName55.equals(name) &&
 				Arrays.deepEquals(_methodParameterTypes55, parameterTypes)) {
+			return KBFolderServiceUtil.fetchKBFolderByUrlTitle(((Long)arguments[0]).longValue(),
+				((Long)arguments[1]).longValue(), (java.lang.String)arguments[2]);
+		}
+
+		if (_methodName56.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes56, parameterTypes)) {
+			return KBFolderServiceUtil.getKBFolder(((Long)arguments[0]).longValue());
+		}
+
+		if (_methodName57.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes57, parameterTypes)) {
+			return KBFolderServiceUtil.getKBFolderByUrlTitle(((Long)arguments[0]).longValue(),
+				((Long)arguments[1]).longValue(), (java.lang.String)arguments[2]);
+		}
+
+		if (_methodName58.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes58, parameterTypes)) {
 			return KBFolderServiceUtil.getKBFolders(((Long)arguments[0]).longValue(),
 				((Long)arguments[1]).longValue(),
 				((Integer)arguments[2]).intValue(),
 				((Integer)arguments[3]).intValue());
 		}
 
-		if (_methodName56.equals(name) &&
-				Arrays.deepEquals(_methodParameterTypes56, parameterTypes)) {
+		if (_methodName59.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes59, parameterTypes)) {
 			return KBFolderServiceUtil.getKBFoldersCount(((Long)arguments[0]).longValue(),
 				((Long)arguments[1]).longValue());
 		}
 
-		if (_methodName57.equals(name) &&
-				Arrays.deepEquals(_methodParameterTypes57, parameterTypes)) {
+		if (_methodName60.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes60, parameterTypes)) {
 			KBFolderServiceUtil.moveKBFolder(((Long)arguments[0]).longValue(),
 				((Long)arguments[1]).longValue());
 
 			return null;
 		}
 
-		if (_methodName58.equals(name) &&
-				Arrays.deepEquals(_methodParameterTypes58, parameterTypes)) {
+		if (_methodName61.equals(name) &&
+				Arrays.deepEquals(_methodParameterTypes61, parameterTypes)) {
 			return KBFolderServiceUtil.updateKBFolder(((Long)arguments[0]).longValue(),
 				((Long)arguments[1]).longValue(),
 				((Long)arguments[2]).longValue(),
@@ -178,4 +211,10 @@ public class KBFolderServiceClpInvoker {
 	private String[] _methodParameterTypes57;
 	private String _methodName58;
 	private String[] _methodParameterTypes58;
+	private String _methodName59;
+	private String[] _methodParameterTypes59;
+	private String _methodName60;
+	private String[] _methodParameterTypes60;
+	private String _methodName61;
+	private String[] _methodParameterTypes61;
 }

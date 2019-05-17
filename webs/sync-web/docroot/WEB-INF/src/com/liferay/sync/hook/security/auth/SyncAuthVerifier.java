@@ -23,6 +23,7 @@ import com.liferay.portal.kernel.util.CharPool;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.model.Company;
@@ -129,25 +130,94 @@ public class SyncAuthVerifier implements AuthVerifier {
 			}
 		}
 
-		try {
-			String[] credentials = getCredentials(
-				request, accessControlContext.getResponse());
+		String token = request.getHeader(_TOKEN_HEADER);
 
-			if (credentials != null) {
-				authVerifierResult.setPassword(credentials[1]);
+		if (Validator.isNotNull(token)) {
+			String userIdString = getUserId(token);
+
+			if (userIdString != null) {
 				authVerifierResult.setState(AuthVerifierResult.State.SUCCESS);
-				authVerifierResult.setUserId(
-					GetterUtil.getLong(credentials[0]));
+				authVerifierResult.setUserId(Long.valueOf(userIdString));
+
+				return authVerifierResult;
+			}
+		}
+
+		String authorization = request.getHeader("Authorization");
+
+		if (authorization == null) {
+
+			// SYNC-1463
+
+			Map<String, Object> settings = accessControlContext.getSettings();
+
+			settings.remove("basic_auth");
+
+			return authVerifierResult;
+		}
+
+		try {
+			long userId = 0;
+			int authResult = 0;
+
+			Map<String, Object> resultsMap = new HashMap<String, Object>();
+
+			StringTokenizer st = new StringTokenizer(authorization);
+
+			String authorizationType = st.nextToken();
+
+			if (!StringUtil.equalsIgnoreCase(
+					authorizationType, HttpServletRequest.BASIC_AUTH)) {
+
+				return authVerifierResult;
+			}
+
+			String credentials = new String(Base64.decode(st.nextToken()));
+
+			int pos = credentials.indexOf(CharPool.COLON);
+
+			String login = credentials.substring(0, pos);
+			String password = credentials.substring(pos + 1);
+
+			Company company = PortalUtil.getCompany(request);
+
+			String authType = company.getAuthType();
+
+			if (authType.equals(CompanyConstants.AUTH_TYPE_EA)) {
+				authResult = UserLocalServiceUtil.authenticateByEmailAddress(
+					company.getCompanyId(), login, password, null, null,
+					resultsMap);
+			}
+			else if (authType.equals(CompanyConstants.AUTH_TYPE_SN)) {
+				authResult = UserLocalServiceUtil.authenticateByScreenName(
+					company.getCompanyId(), login, password, null, null,
+					resultsMap);
+			}
+			else if (authType.equals(CompanyConstants.AUTH_TYPE_ID)) {
+				authResult = UserLocalServiceUtil.authenticateByUserId(
+					company.getCompanyId(), GetterUtil.getLong(login), password,
+					null, null, resultsMap);
+			}
+
+			if (authResult == Authenticator.SUCCESS) {
+				userId = MapUtil.getLong(resultsMap, "userId");
+
+				token = createToken(userId);
+
+				if (token != null) {
+					HttpServletResponse response =
+						accessControlContext.getResponse();
+
+					response.addHeader(_TOKEN_HEADER, token);
+				}
 			}
 			else {
-
-				// SYNC-1463
-
-				Map<String, Object> settings =
-					accessControlContext.getSettings();
-
-				settings.remove("basic_auth");
+				userId = UserLocalServiceUtil.getDefaultUserId(
+					PortalUtil.getCompanyId(request));
 			}
+
+			authVerifierResult.setState(AuthVerifierResult.State.SUCCESS);
+			authVerifierResult.setUserId(userId);
 
 			return authVerifierResult;
 		}
@@ -170,7 +240,7 @@ public class SyncAuthVerifier implements AuthVerifier {
 
 		Instant instant = new Instant();
 
-		jsonToken.setExpiration(instant.plus(_expiration));
+		jsonToken.setExpiration(instant.plus(_EXPIRATION));
 		jsonToken.setIssuedAt(instant);
 
 		JsonObject payloadJsonObject = jsonToken.getPayloadAsJsonObject();
@@ -185,94 +255,12 @@ public class SyncAuthVerifier implements AuthVerifier {
 		}
 	}
 
-	protected String[] getCredentials(
-			HttpServletRequest request, HttpServletResponse response)
-		throws Exception {
-
-		String token = request.getHeader(_TOKEN_HEADER);
-
-		if (Validator.isNotNull(token)) {
-			String userId = getUserId(token);
-
-			if (userId != null) {
-				return new String[] {userId, null};
-			}
-		}
-
-		String authorization = request.getHeader("Authorization");
-
-		if (authorization == null) {
-			return null;
-		}
-
-		long userId = 0;
-
-		Map<String, Object> resultsMap = new HashMap<String, Object>();
-
-		StringTokenizer st = new StringTokenizer(authorization);
-
-		st.nextToken();
-
-		String credentials = new String(Base64.decode(st.nextToken()));
-
-		int pos = credentials.indexOf(CharPool.COLON);
-
-		String login = credentials.substring(0, pos);
-		String password = credentials.substring(pos + 1);
-
-		Company company = PortalUtil.getCompany(request);
-
-		String authType = company.getAuthType();
-
-		if (authType.equals(CompanyConstants.AUTH_TYPE_EA)) {
-			int authResult = UserLocalServiceUtil.authenticateByEmailAddress(
-				company.getCompanyId(), login, password, null, null,
-				resultsMap);
-
-			if (authResult != Authenticator.SUCCESS) {
-				throw new AuthException();
-			}
-
-			userId = MapUtil.getLong(resultsMap, "userId");
-		}
-		else if (authType.equals(CompanyConstants.AUTH_TYPE_SN)) {
-			int authResult = UserLocalServiceUtil.authenticateByScreenName(
-				company.getCompanyId(), login, password, null, null,
-				resultsMap);
-
-			if (authResult != Authenticator.SUCCESS) {
-				throw new AuthException();
-			}
-
-			userId = MapUtil.getLong(resultsMap, "userId");
-		}
-		else if (authType.equals(CompanyConstants.AUTH_TYPE_ID)) {
-			int authResult = UserLocalServiceUtil.authenticateByUserId(
-				company.getCompanyId(), GetterUtil.getLong(login), password,
-				null, null, resultsMap);
-
-			if (authResult != Authenticator.SUCCESS) {
-				throw new AuthException();
-			}
-
-			userId = GetterUtil.getLong(login);
-		}
-
-		token = createToken(userId);
-
-		if (token != null) {
-			response.addHeader(_TOKEN_HEADER, token);
-		}
-
-		return new String[] {String.valueOf(userId), password};
-	}
-
 	protected JsonTokenParser getJsonTokenParser() throws Exception {
 		if (_jsonTokenParser != null) {
 			return _jsonTokenParser;
 		}
 
-		final Verifier verifier = new HmacSHA256Verifier(_secret.getBytes());
+		final Verifier verifier = new HmacSHA256Verifier(_SECRET.getBytes());
 
 		VerifierProvider verifierProvider = new VerifierProvider() {
 
@@ -307,7 +295,7 @@ public class SyncAuthVerifier implements AuthVerifier {
 		}
 
 		try {
-			_signer = new HmacSHA256Signer(null, null, _secret.getBytes());
+			_signer = new HmacSHA256Signer(null, null, _SECRET.getBytes());
 
 			return _signer;
 		}
@@ -316,11 +304,13 @@ public class SyncAuthVerifier implements AuthVerifier {
 		}
 	}
 
+	private static final long _EXPIRATION = 3600000;
+
+	private static final String _SECRET = PwdGenerator.getPassword();
+
 	private static final String _TOKEN_HEADER = "Sync-JWT";
 
-	private static long _expiration = 3600000;
 	private static JsonTokenParser _jsonTokenParser;
-	private static String _secret = PwdGenerator.getPassword();
 	private static Signer _signer;
 
 }

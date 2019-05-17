@@ -19,7 +19,11 @@ import com.liferay.knowledgebase.model.KBFolderConstants;
 import com.liferay.knowledgebase.service.KBFolderLocalServiceUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.PropsKeys;
+import com.liferay.portal.kernel.util.PropsUtil;
 import com.liferay.portal.security.auth.PrincipalException;
+import com.liferay.portal.security.permission.ActionKeys;
 import com.liferay.portal.security.permission.PermissionChecker;
 
 /**
@@ -30,7 +34,7 @@ public class KBFolderPermission {
 	public static void check(
 			PermissionChecker permissionChecker, KBFolder kbFolder,
 			String actionId)
-		throws PortalException {
+		throws PortalException, SystemException {
 
 		if (!contains(permissionChecker, kbFolder, actionId)) {
 			throw new PrincipalException();
@@ -58,8 +62,20 @@ public class KBFolderPermission {
 	}
 
 	public static boolean contains(
-		PermissionChecker permissionChecker, KBFolder kbFolder,
-		String actionId) {
+			PermissionChecker permissionChecker, KBFolder kbFolder,
+			String actionId)
+		throws PortalException, SystemException {
+
+		if (actionId.equals(ActionKeys.VIEW) &&
+			_PERMISSIONS_VIEW_DYNAMIC_INHERITANCE) {
+
+			if (!contains(
+					permissionChecker, kbFolder.getGroupId(),
+					kbFolder.getParentKBFolderId(), actionId)) {
+
+				return false;
+			}
+		}
 
 		if (permissionChecker.hasOwnerPermission(
 				kbFolder.getCompanyId(), KBFolder.class.getName(),
@@ -79,6 +95,10 @@ public class KBFolderPermission {
 		throws PortalException, SystemException {
 
 		if (kbFolderId == KBFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
+			if (actionId.equals(ActionKeys.VIEW)) {
+				return true;
+			}
+
 			return AdminPermission.contains(
 				permissionChecker, groupId, actionId);
 		}
@@ -87,5 +107,9 @@ public class KBFolderPermission {
 
 		return contains(permissionChecker, kbFolder, actionId);
 	}
+
+	private static final boolean _PERMISSIONS_VIEW_DYNAMIC_INHERITANCE =
+		GetterUtil.getBoolean(
+			PropsUtil.get(PropsKeys.PERMISSIONS_VIEW_DYNAMIC_INHERITANCE));
 
 }
